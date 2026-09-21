@@ -1,0 +1,1779 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>중대재해 이행점검 서류심사</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
+<style>
+:root{
+  --ink:#16212B; --ink-soft:#4B5A68; --ink-faint:#7C8A99;
+  --paper:#EEF3F4; --surface:#FFFFFF; --surface-2:#F5F8F9;
+  --border:#D7DEE1; --border-soft:#E5EAEC;
+  --accent:#1D5673; --accent-ink:#ffffff; --accent-soft:#E3EDF1; --accent-strong:#0F3A4F;
+  --good:#1E8A5F; --good-soft:#E4F3EC;
+  --mid:#B8790E; --mid-soft:#FBF0DC;
+  --low:#C0392B; --low-soft:#FBE7E4;
+  --na:#7C8A99; --na-soft:#EEF1F3;
+  --shadow: 0 1px 2px rgba(22,33,43,.06), 0 4px 14px rgba(22,33,43,.06);
+  --radius: 10px;
+  --thumb-size: 96px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#E7EDF0; --ink-soft:#A8B6C0; --ink-faint:#7C8996;
+    --paper:#0E1417; --surface:#161E22; --surface-2:#1C252A;
+    --border:#2B363C; --border-soft:#233036;
+    --accent:#7EC1E0; --accent-ink:#0B222C; --accent-soft:#1B323C; --accent-strong:#9AD2EC;
+    --good:#4FC191; --good-soft:#15302A;
+    --mid:#E3AC49; --mid-soft:#382C14;
+    --low:#E27A6E; --low-soft:#37201D;
+    --na:#8C99A3; --na-soft:#212B30;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 20px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E7EDF0; --ink-soft:#A8B6C0; --ink-faint:#7C8996;
+  --paper:#0E1417; --surface:#161E22; --surface-2:#1C252A;
+  --border:#2B363C; --border-soft:#233036;
+  --accent:#7EC1E0; --accent-ink:#0B222C; --accent-soft:#1B323C; --accent-strong:#9AD2EC;
+  --good:#4FC191; --good-soft:#15302A;
+  --mid:#E3AC49; --mid-soft:#382C14;
+  --low:#E27A6E; --low-soft:#37201D;
+  --na:#8C99A3; --na-soft:#212B30;
+  --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 20px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:'IBM Plex Sans KR', 'Noto Sans KR', -apple-system, sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-variant-numeric:tabular-nums; }
+button{ font-family:inherit; }
+input,textarea{ font-family:inherit; color:inherit; }
+::selection{ background:var(--accent-soft); }
+a{ color:var(--accent-strong); }
+
+/* ---------- header ---------- */
+.topbar{
+  position:sticky; top:0; z-index:30; background:var(--surface);
+  border-bottom:1px solid var(--border); box-shadow:var(--shadow);
+}
+.topbar-inner{
+  max-width:1180px; margin:0 auto; padding:14px 20px 0;
+}
+.brand{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.brand h1{ font-size:19px; font-weight:700; margin:0; letter-spacing:-.01em; }
+.brand .sub{ font-size:12.5px; color:var(--ink-faint); }
+.save-badge{
+  margin-left:auto; font-size:11.5px; padding:3px 9px; border-radius:999px;
+  border:1px solid var(--border); color:var(--ink-faint); white-space:nowrap;
+}
+.save-badge.live{ color:var(--good); border-color:var(--good-soft); background:var(--good-soft); }
+.brand-row{ display:flex; align-items:center; gap:10px; }
+.period-select{
+  border:1px solid var(--border); background:var(--surface-2); color:var(--ink);
+  border-radius:7px; padding:6px 9px; font-size:12.5px; font-weight:600; cursor:pointer;
+  font-family:inherit;
+}
+
+.tabs{
+  display:flex; gap:4px; overflow-x:auto; margin-top:12px; padding-bottom:0;
+  scrollbar-width:thin;
+}
+.tab{
+  flex:0 0 auto; display:flex; align-items:center; gap:7px;
+  padding:9px 14px; font-size:13.5px; font-weight:600; color:var(--ink-soft);
+  border:none; background:none; border-bottom:2.5px solid transparent; cursor:pointer;
+  white-space:nowrap;
+}
+.tab:hover{ color:var(--ink); }
+.tab.active{ color:var(--accent-strong); border-bottom-color:var(--accent); }
+.tab .pct{
+  font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600;
+  padding:1px 6px; border-radius:999px; background:var(--surface-2); color:var(--ink-faint);
+}
+.tab .pct.band-good{ background:var(--good-soft); color:var(--good); }
+.tab .pct.band-mid{ background:var(--mid-soft); color:var(--mid); }
+.tab .pct.band-low{ background:var(--low-soft); color:var(--low); }
+.tab.tab-add{
+  border:1.5px dashed var(--border); border-radius:999px; padding:6px 13px; margin:4px 0;
+  color:var(--ink-faint); align-self:center;
+}
+.tab.tab-add:hover{ border-color:var(--accent); color:var(--accent-strong); }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:20px; }
+
+/* ---------- dashboard ---------- */
+.dash-grid{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; margin-bottom:22px;
+}
+.site-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px; box-shadow:var(--shadow); cursor:pointer; text-align:left;
+  display:flex; flex-direction:column; gap:10px;
+}
+.site-card:hover{ border-color:var(--accent); }
+.site-card .name{ font-weight:700; font-size:15px; }
+.site-card .meta{ font-size:12px; color:var(--ink-faint); }
+.gauge-row{ display:flex; align-items:center; gap:12px; }
+.gauge-num{ font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:700; }
+.gauge-bar{ flex:1; height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden; }
+.gauge-bar > i{ display:block; height:100%; border-radius:999px; }
+.progress-line{ font-size:11.5px; color:var(--ink-faint); }
+
+.section-title-row{
+  display:flex; align-items:baseline; justify-content:space-between; margin:26px 0 10px;
+}
+.section-title-row h2{ font-size:15px; margin:0; font-weight:700; }
+.section-title-row .hint{ font-size:12px; color:var(--ink-faint); }
+
+.dash-title-row{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.dash-title-row h2{ font-size:19px; margin:0; font-weight:700; letter-spacing:-.01em; }
+.dash-title-row .hint{ font-size:12.5px; color:var(--ink-faint); }
+
+.chart-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:18px 18px 8px; overflow-x:auto; margin-bottom:22px;
+}
+.chart-empty{ color:var(--ink-faint); font-size:13px; padding:24px; text-align:center; }
+
+.matrix-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); box-shadow:var(--shadow); }
+table.matrix{ border-collapse:collapse; width:100%; font-size:12.5px; min-width:760px; }
+table.matrix th, table.matrix td{ padding:8px 10px; border-bottom:1px solid var(--border-soft); text-align:center; }
+table.matrix th{ text-align:left; color:var(--ink-faint); font-weight:600; font-size:11.5px; background:var(--surface-2); position:sticky; top:0; }
+table.matrix td.rowhead{ text-align:left; font-weight:600; }
+table.matrix tr:last-child td{ border-bottom:none; }
+.cell-pct{
+  display:inline-block; min-width:42px; padding:3px 6px; border-radius:6px;
+  font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:11.5px;
+}
+.cell-pct.band-good{ background:var(--good-soft); color:var(--good); }
+.cell-pct.band-mid{ background:var(--mid-soft); color:var(--mid); }
+.cell-pct.band-low{ background:var(--low-soft); color:var(--low); }
+.cell-pct.band-empty{ background:var(--surface-2); color:var(--ink-faint); }
+
+/* ---------- site view ---------- */
+.site-header{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:18px 20px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;
+  margin-bottom:16px;
+}
+.ring-wrap{ position:relative; width:96px; height:96px; flex:0 0 auto; }
+.ring-wrap svg{ width:96px; height:96px; transform:rotate(-90deg); }
+.ring-wrap .ring-num{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:19px;
+}
+.site-fields{ display:flex; flex-direction:column; gap:8px; flex:1 1 260px; min-width:220px; }
+.field-row{ display:flex; gap:8px; flex-wrap:wrap; }
+.field{ display:flex; flex-direction:column; gap:3px; }
+.field label{ font-size:10.5px; color:var(--ink-faint); font-weight:600; letter-spacing:.02em; }
+.field input{
+  border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px;
+  background:var(--surface-2); color:var(--ink); min-width:0;
+}
+.field input:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+#field-name{ font-weight:700; font-size:15px; min-width:150px; }
+.site-stats{ display:flex; gap:22px; flex-wrap:wrap; margin-left:auto; }
+.stat{ text-align:right; }
+.stat .v{ font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:700; }
+.stat .l{ font-size:10.5px; color:var(--ink-faint); }
+.print-btn{
+  border:1px solid var(--border); background:var(--surface-2); color:var(--ink-soft);
+  border-radius:7px; padding:8px 12px; font-size:12.5px; font-weight:600; cursor:pointer;
+}
+.print-btn:hover{ border-color:var(--accent); color:var(--accent-strong); }
+.danger-btn{ color:var(--low); border-color:var(--low-soft); background:var(--low-soft); }
+.danger-btn.danger-armed{ background:var(--low); border-color:var(--low); color:#fff; }
+
+.chip-nav{ display:flex; gap:6px; overflow-x:auto; padding:2px 0 14px; }
+.chip{
+  flex:0 0 auto; border:1px solid var(--border); background:var(--surface); color:var(--ink-soft);
+  border-radius:999px; padding:5px 11px; font-size:11.5px; font-weight:600; cursor:pointer; white-space:nowrap;
+}
+.chip .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+
+details.section-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow); margin-bottom:10px; overflow:hidden; scroll-margin-top:190px;
+}
+details.section-card > summary{
+  list-style:none; cursor:pointer; padding:13px 16px; display:flex; align-items:center; gap:12px;
+}
+details.section-card > summary::-webkit-details-marker{ display:none; }
+.sec-chevron{ transition:transform .15s; color:var(--ink-faint); flex:0 0 auto; }
+details[open] > summary .sec-chevron{ transform:rotate(90deg); }
+.sec-heading{ flex:1; min-width:0; }
+.sec-heading .num{ color:var(--accent-strong); font-weight:700; }
+.sec-heading .t{ font-weight:600; font-size:13.8px; }
+.sec-heading .ref{ font-size:11px; color:var(--ink-faint); margin-top:1px; }
+.sec-subtotal{ display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+.sec-bar{ width:76px; height:6px; border-radius:999px; background:var(--surface-2); overflow:hidden; }
+.sec-bar > i{ display:block; height:100%; }
+.sec-num-lbl{ font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; min-width:70px; text-align:right; }
+
+.item{ padding:14px 16px; border-top:1px solid var(--border-soft); display:flex; flex-direction:column; gap:9px; }
+.item-head{ display:flex; gap:10px; align-items:flex-start; }
+.item-no{
+  flex:0 0 auto; width:22px; height:22px; border-radius:6px; background:var(--surface-2); color:var(--ink-faint);
+  display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; margin-top:1px;
+}
+.item-crit{ font-size:13.3px; line-height:1.55; white-space:pre-wrap; flex:1; }
+.item-method{ font-size:11.5px; color:var(--ink-faint); white-space:pre-wrap; line-height:1.5; padding-left:32px; }
+.rate-row{ display:flex; gap:6px; flex-wrap:wrap; padding-left:32px; }
+.rate-btn{
+  border:1px solid var(--border); background:var(--surface); color:var(--ink-soft);
+  border-radius:7px; padding:7px 12px; font-size:12.5px; font-weight:600; cursor:pointer;
+}
+.rate-btn[data-val="good"].active{ background:var(--good-soft); border-color:var(--good); color:var(--good); }
+.rate-btn[data-val="mid"].active{ background:var(--mid-soft); border-color:var(--mid); color:var(--mid); }
+.rate-btn[data-val="low"].active{ background:var(--low-soft); border-color:var(--low); color:var(--low); }
+.rate-btn[data-val="na"].active{ background:var(--na-soft); border-color:var(--na); color:var(--na); }
+.item-score{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--ink-faint); padding-left:2px; align-self:center; margin-left:2px; }
+.note-wrap{ padding-left:32px; }
+.note-wrap textarea{
+  width:100%; resize:vertical; min-height:40px; border:1px solid var(--border); border-radius:7px;
+  padding:8px 10px; font-size:12.5px; background:var(--surface-2); color:var(--ink);
+}
+.note-wrap textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; background:var(--surface); }
+.note-wrap textarea::placeholder{ color:var(--ink-faint); }
+
+.photo-wrap{ padding-left:32px; }
+.photo-strip{ display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px; }
+.photo-slot{
+  width:calc(var(--thumb-size) * 2); border-radius:9px; overflow:hidden; flex:0 0 auto;
+  border:1px solid var(--border); background:var(--surface-2); display:flex; flex-direction:column;
+  transition:width .15s;
+}
+.photo-slot.empty{
+  align-items:center; justify-content:center; height:calc(var(--thumb-size) * 1.15);
+  border:1.5px dashed var(--border); background:var(--surface-2); color:var(--ink-faint);
+  cursor:pointer; transition:width .15s, height .15s;
+}
+.photo-slot.empty:hover{ border-color:var(--accent); color:var(--accent-strong); }
+.photo-slot.empty .slot-plus{ font-size:24px; line-height:1; }
+.slot-caption-input{
+  display:block; width:100%; border:none; background:var(--accent-strong); color:#fff;
+  font-weight:700; font-size:11.5px; text-align:center; padding:7px 8px; letter-spacing:.01em;
+}
+.slot-caption-input::placeholder{ color:rgba(255,255,255,.68); font-weight:600; }
+.slot-caption-input:focus{ outline:2px solid rgba(255,255,255,.55); outline-offset:-2px; }
+.slot-grid{ display:grid; gap:2px; height:calc(var(--thumb-size) * 1.2); background:var(--border); transition:height .15s; }
+.slot-grid.n1{ grid-template-columns:1fr; }
+.slot-grid.n2{ grid-template-columns:1fr 1fr; }
+.slot-grid.n3{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+.slot-grid.n3 .slot-cell:first-child{ grid-column:1 / span 2; }
+.slot-cell{ position:relative; overflow:hidden; background:var(--surface-2); }
+.slot-cell img{ width:100%; height:100%; object-fit:cover; display:block; cursor:zoom-in; }
+.photo-del-btn{
+  position:absolute; top:3px; right:3px; width:18px; height:18px; border-radius:50%; border:none;
+  background:rgba(0,0,0,.62); color:#fff; font-size:12px; line-height:1; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; padding:0; z-index:2;
+}
+.slot-tools{ display:flex; border-top:1px solid var(--border); }
+.slot-tools button{
+  flex:1; border:none; background:var(--surface); color:var(--ink-faint); font-size:9.5px; font-weight:600;
+  padding:4px 1px; cursor:pointer; line-height:1.2; border-right:1px solid var(--border); white-space:nowrap;
+}
+.slot-tools button:last-child{ border-right:none; }
+.slot-tools button:hover:not(:disabled){ color:var(--accent-strong); background:var(--accent-soft); }
+.slot-tools button:disabled{ opacity:.4; cursor:default; }
+.print-btn:disabled{ opacity:.6; cursor:default; }
+
+.photo-size-toggle{
+  display:flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; flex:0 0 auto;
+}
+.photo-size-toggle button{
+  border:none; background:var(--surface-2); color:var(--ink-faint); padding:8px 10px;
+  font-size:11.5px; font-weight:700; cursor:pointer; border-left:1px solid var(--border);
+}
+.photo-size-toggle button:first-child{ border-left:none; }
+.photo-size-toggle button.active{ background:var(--accent-soft); color:var(--accent-strong); }
+.photo-size-toggle button:hover:not(.active){ color:var(--ink); }
+
+.foot-note{ font-size:11.5px; color:var(--ink-faint); line-height:1.7; margin:26px 0 6px; }
+
+/* ---------- lightbox ---------- */
+.lightbox{
+  position:fixed; inset:0; background:rgba(8,12,15,.9); z-index:200;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;
+}
+.lightbox[hidden]{ display:none; }
+.lightbox img{
+  max-width:min(92vw,900px); max-height:70vh; border-radius:10px; object-fit:contain;
+  box-shadow:0 20px 60px rgba(0,0,0,.5); background:#0b0f12;
+}
+.lb-close{
+  position:absolute; top:16px; right:16px; width:38px; height:38px; border-radius:50%; border:none;
+  background:rgba(255,255,255,.14); color:#fff; font-size:17px; cursor:pointer;
+}
+.lb-nav{
+  position:absolute; top:50%; transform:translateY(-50%); width:46px; height:46px; border-radius:50%;
+  border:none; background:rgba(255,255,255,.14); color:#fff; font-size:24px; cursor:pointer;
+}
+.lb-nav:disabled{ opacity:.25; cursor:default; }
+.lb-prev{ left:14px; } .lb-next{ right:14px; }
+.lb-footer{ margin-top:16px; display:flex; align-items:center; gap:18px; color:#D7DEE1; font-size:12.5px; }
+.lb-del{
+  border:1px solid rgba(255,255,255,.32); background:none; color:#F0A99E; border-radius:7px;
+  padding:6px 13px; font-size:12px; cursor:pointer;
+}
+.lb-del:hover{ background:rgba(240,169,158,.12); }
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed; left:50%; bottom:22px; transform:translate(-50%,10px); z-index:250;
+  background:var(--ink); color:var(--paper); padding:11px 18px; border-radius:9px;
+  font-size:12.5px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s;
+  max-width:82vw; text-align:center; box-shadow:var(--shadow);
+}
+.toast.show{ opacity:1; transform:translate(-50%,0); }
+
+/* ---------- summary (종합의견) ---------- */
+.summary-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:16px 18px; margin-top:14px; margin-bottom:10px;
+}
+.summary-head{ display:flex; flex-direction:column; gap:2px; margin-bottom:10px; }
+.summary-head h3{ margin:0; font-size:14.5px; font-weight:700; }
+.summary-head .hint{ font-size:11.5px; color:var(--ink-faint); }
+#field-summary{
+  width:100%; min-height:96px; resize:vertical; border:1px solid var(--border); border-radius:8px;
+  padding:10px 12px; font-size:13px; line-height:1.65; background:var(--surface-2); color:var(--ink);
+}
+#field-summary:focus{ outline:2px solid var(--accent); outline-offset:1px; background:var(--surface); }
+#field-summary::placeholder{ color:var(--ink-faint); }
+
+/* ---------- modals (photo preview / pdf preview) ---------- */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(8,12,15,.62); z-index:220;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.modal-overlay[hidden]{ display:none; }
+.modal-card{
+  background:var(--surface); border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.35);
+  width:100%; max-width:560px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden;
+}
+.modal-card.modal-wide{ max-width:820px; }
+.modal-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:16px 18px; border-bottom:1px solid var(--border-soft); flex:0 0 auto;
+}
+.modal-head h3{ margin:0; font-size:15px; font-weight:700; }
+.modal-head .hint{ font-size:11.5px; color:var(--ink-faint); margin-top:2px; display:block; }
+.modal-close{
+  border:none; background:var(--surface-2); color:var(--ink-faint); width:30px; height:30px;
+  border-radius:50%; font-size:15px; cursor:pointer; flex:0 0 auto;
+}
+.modal-close:hover{ color:var(--ink); }
+.modal-body{ padding:16px 18px; overflow-y:auto; flex:1 1 auto; background:var(--paper); }
+.modal-actions{
+  display:flex; justify-content:flex-end; gap:8px; padding:14px 18px; border-top:1px solid var(--border-soft); flex:0 0 auto;
+}
+.btn-secondary{
+  border:1px solid var(--border); background:var(--surface); color:var(--ink-soft);
+  border-radius:7px; padding:8px 16px; font-size:12.5px; font-weight:600; cursor:pointer;
+}
+.btn-secondary:hover{ border-color:var(--accent); color:var(--accent-strong); }
+.btn-primary{
+  border:1px solid var(--accent-strong); background:var(--accent-strong); color:var(--accent-ink);
+  border-radius:7px; padding:8px 16px; font-size:12.5px; font-weight:700; cursor:pointer;
+}
+.btn-primary:hover{ filter:brightness(1.08); }
+.btn-primary:disabled, .btn-secondary:disabled{ opacity:.55; cursor:default; }
+
+/* photo preview modal */
+.ppm-grid{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+.ppm-thumb{ width:96px; height:96px; border-radius:9px; overflow:hidden; border:1px solid var(--border); flex:0 0 auto; }
+.ppm-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+.ppm-size-row{ margin-bottom:6px; }
+.ppm-size-row > label{ font-size:11.5px; color:var(--ink-faint); font-weight:600; display:block; margin-bottom:7px; }
+.ppm-size-btns{ display:flex; gap:7px; flex-wrap:wrap; }
+.ppm-size-btn{
+  border:1px solid var(--border); background:var(--surface); color:var(--ink-soft);
+  border-radius:8px; padding:9px 13px; font-size:12.5px; font-weight:600; cursor:pointer; text-align:left; flex:1 1 140px;
+}
+.ppm-size-btn .t{ display:block; font-weight:700; margin-bottom:2px; }
+.ppm-size-btn .d{ display:block; font-size:11px; color:var(--ink-faint); font-weight:500; }
+.ppm-size-btn.active{ border-color:var(--accent); background:var(--accent-soft); color:var(--accent-strong); }
+.ppm-size-btn.active .d{ color:var(--accent-strong); opacity:.8; }
+
+/* pdf preview modal */
+.pdf-preview-sheet{
+  max-width:760px; margin:0 auto; background:#ffffff; color:#16212B; border-radius:8px;
+  box-shadow:0 4px 20px rgba(0,0,0,.12); padding:6px 22px 22px;
+}
+
+@media (max-width:640px){
+  .site-stats{ margin-left:0; width:100%; justify-content:space-between; }
+  .site-header{ padding:16px; }
+  .brand-row{ flex-wrap:wrap; }
+  .brand{ flex:1 1 100%; }
+  .brand .sub{ display:none; }
+  .period-select{ order:2; }
+  .save-badge{ order:3; margin-left:0; }
+}
+@media print{
+  .topbar, .chip-nav, .print-btn, .modal-overlay{ display:none !important; }
+  details.section-card{ break-inside:avoid; }
+  body{ background:#fff; }
+}
+</style>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand-row">
+      <div class="brand">
+        <h1>중대재해 이행점검 · 서류심사</h1>
+        <span class="sub">법 제4조 1항 / 시행령 제4조 각호 · 안전보건 사고예방 확인점검(법적서류 분야)</span>
+      </div>
+      <select id="periodSelect" class="period-select"></select>
+      <span class="save-badge" id="saveBadge">연결 확인 중…</span>
+    </div>
+    <nav class="tabs" id="tabs"></nav>
+  </div>
+</div>
+<div class="wrap" id="app"></div>
+
+<div class="lightbox" id="lightbox" hidden>
+  <button class="lb-close" id="lbClose" title="닫기">✕</button>
+  <button class="lb-nav lb-prev" id="lbPrev" title="이전 사진">‹</button>
+  <img id="lbImg" src="" alt="사진 확대보기">
+  <button class="lb-nav lb-next" id="lbNext" title="다음 사진">›</button>
+  <div class="lb-footer">
+    <span id="lbCount"></span>
+    <button class="lb-del" id="lbDel" type="button">이 사진 삭제</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="photoPreviewModal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h3>사진 미리보기</h3>
+        <span class="hint" id="ppmCount">사진 0장</span>
+      </div>
+      <button class="modal-close" id="ppmClose" type="button" title="닫기">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ppm-grid" id="ppmGrid"></div>
+      <div class="ppm-size-row">
+        <label>사진 크기 (저장 용량)</label>
+        <div class="ppm-size-btns">
+          <button class="ppm-size-btn" type="button" data-preset="small"><span class="t">작게</span><span class="d">빠른 첨부 · 저용량</span></button>
+          <button class="ppm-size-btn" type="button" data-preset="medium"><span class="t">보통</span><span class="d">권장 · 균형</span></button>
+          <button class="ppm-size-btn" type="button" data-preset="large"><span class="t">크게</span><span class="d">고화질 · 고용량</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="ppmCancel" type="button">취소</button>
+      <button class="btn-primary" id="ppmSaveBtn" type="button">사진 저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pdfPreviewModal" hidden>
+  <div class="modal-card modal-wide">
+    <div class="modal-head">
+      <div>
+        <h3>PDF 미리보기</h3>
+        <span class="hint">보고서 내용을 확인한 뒤 저장하세요</span>
+      </div>
+      <button class="modal-close" id="pdfPreviewClose" type="button" title="닫기">✕</button>
+    </div>
+    <div class="modal-body" id="pdfPreviewBody"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="pdfPreviewCancelBtn" type="button">취소</button>
+      <button class="btn-primary" id="pdfPreviewSaveBtn" type="button">PDF 저장</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ====================== DATA ====================== */
+const SECTIONS = [{"num": 1, "title": "안전ㆍ보건 경영방침과 목표의 설정", "ref": "법 제4조 1항, 시행령 제4조 제1항", "items": [{"id": "r5", "no": 1, "criteria": "■ 안전보건 방침 및 목표 수립의 적정성\n 1) 공사특성,유해위험요인,규모 등을 고려한 실현·구체성 여부\n 2) 본사 안전보건경영방침·목표와의 연계성·일관성 여부  \n 3) 안전보건 목표의 정량화", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r6", "no": 1, "criteria": "4) 안전보건방침 및 목표에 대한 세부추진계획 수립\n 5) 세부추진계획의 적정성", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r7", "no": 2, "criteria": "■ 안전보건 방침 및 목표의 인식\n 1) 방침 및 목표 게시\n     - 현장소장실, 현장사무실, 안전교육장, 안전조회장, 식당 등\n     - 현장 내 2개소 이상\n 2) 현장소장 서명 여부 (우측하단)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r8", "no": 2, "criteria": "3) 방침 목표의 숙지여부 (인터뷰)\n   - 관리감독자 2인\n   - 협력업체 관리책임자 2인", "method": "우수: 모두 숙지(5점)\n보통: 일부 숙지(3점)\n미흡: 미숙지(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r9", "no": 3, "criteria": "■ 안전보건 방침 및 목표 성과측정\n 1) 분기1회 성과측정 실시여부 (담당ㆍ승인자 서명)", "method": "우수: 매분기 실시(5점)\n보통: 1회 누락(3점)\n미흡: 2회이상 누락(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r10", "no": 4, "criteria": "2) 성과측정의 적정 실시 여부\n     - 성과측정에 대한 근거자료\n     - 목표달성ㆍ미달성에 대한 추가 계획 등", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 2, "title": "안전ㆍ보건 업무를 총괄ㆍ관리하는 전담 조직 설치", "ref": "법 제4조 1항, 시행령 제4조 제2항", "items": [{"id": "r13", "no": 1, "criteria": "■ 전담조직 조직구성 및 참여(현장)\n 1) 현장 안전보건조직 구성 (조직도)\n 2) 안전조직의 STAFF 구성\n 3) LINE 조직의 관리감독자 참여 여부 (누락확인)", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r14", "no": 2, "criteria": "■ 전담조직 대외 보고 현황\n 1) 고용노동부 공문발송 현황과 적정성\n 2) 감리ㆍ건설산업관리단 공문발송 현황과 적정성\n 3) 문서의 보관의 적정성", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r15", "no": 3, "criteria": "■ 전담조직 규모, 형태와 관련한 의사결정과정 문서\n 1) 업무분장에 의한 책임과 권한 설정 여부(서명 확인)\n 2) 업무분장 숙지여부 (인터뷰)\n   - 현장소장 / 안전관리자1 / 관리감독자1", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 3, "title": "유해ㆍ위험요인 확인 개선 절차 마련, 점검 및 조치", "ref": "법 제4조 1항, 시행령 제4조 제3항", "items": [{"id": "r18", "no": 1, "criteria": "■ 위험성평가실시규정,최초,정기 위험성평가 실시\n 1) 적정시기에 따른 작성 및 실시여부\n 2) 참여대상자의 적정성 (현장소장/공사팀장)\n 3) 작성내용의 적정성 (재해사례등 반영)", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 10, "mid": 5, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r19", "no": 2, "criteria": "■ 수시 위험성평가 실시\n 1) 해당공종 수시위험성평가 실시 여부\n 2) 관리감독자 검토의견 작성 여부\n 3) 현장소장 승인의견 작성 여부\n 4) 대상자의 위험성평가 참석여부\n   - 현장소장/각팀장/협력사소장\n 5) 중대재해 또는 산업재해 발생시 해당작업 재개 전 실시여부", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 20, "mid": 10, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r20", "no": 2, "criteria": "6) 대상별 유해·위험요인 누락여부\n   - 현장 작업 확인", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 10, "mid": 5, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r21", "no": 4, "criteria": "■ 위험성평가 근로자 참여\n 1) 수시 위험성평가표 작성시  근로자 참여 여부\n 2) 수시 위험성평가회의에 주요공정 근로자 참여 여부\n 3) 회의록 작성 및 결재 여부", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 10, "mid": 5, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r22", "no": 5, "criteria": "■ 위험성평가 유해위험요인 교육\n 1) 위험성평가 근로자 전파 교육 실시 여부\n   - 당일 출력인원 대비 (임의 선정 2개)", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 10, "mid": 5, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r23", "no": 6, "criteria": "■  기록 및 보존\n 1) 위험성평가를 위한 사전조사 한 안전보건정보\n   - 출처의 확인 가능한 정보\n 2) 위험성평가 대상의 유해위험요인\n 3) 위험성 결정 내용 및 결정에 따른 조치내용\n 4) 위험성평가 실시규정 작성여부", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 10, "mid": 5, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r24", "no": 7, "criteria": "■ 위험성평가 내실화\n 1) 중점관리항목의 점검실시 이행 여부 \n 2) 추가위험발굴  및 조치 이행 여부\n 3) 부적합사항 개선대책 이행 여부", "method": "우수: 모두 적정(5점)\n보통:일부만 적정(3점)\n미흡:모두 부적정(0점)", "good": 10, "mid": 5, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 4, "title": "안전ㆍ보건에 관한 인력ㆍ시설ㆍ장비 구비와 유해ㆍ위험요인 개선 예산 편성 및 집행", "ref": "법 제4조 1항, 시행령 제4조 제4항", "items": [{"id": "r27", "no": 1, "criteria": "■ 안전보건예산 편성 및 사용내역 관리\n 1) 실질적 재해예방 소요 비용 예산 편성\n     (인력, 시설, 장비, 위험요인개선)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r28", "no": 2, "criteria": "■ 인력ㆍ시설ㆍ장비의 구비, 유해ㆍ위험요인개선 등 구분\n 1) 안전보건에 관한 인력(선임), 시설 및 장비의 구비\n 2) 유해ㆍ위험요인의 개선(위험성평가) 소요 비용\n   - 산업안전보건관리비 자율결정항목 적정성 확인", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r29", "no": 3, "criteria": "■ 산업안전보건관리비 사용계획 및 집행 실적\n 1) 공사규모 및 종류별 계상기준 적합여부\n 2) 안전보건 목적외 사용 여부 확인\n 3) 공사진척에 따른 사용비율 적정 여부\n 4) 사용내역서 적정시기 작성여부(다음달 10일이내)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r30", "no": 4, "criteria": "■ 현장 예산사용 관련 세부위임 전결규정\n 1) 안전보건관리책임자 예산 집행 권한부여 여부\n   - 산업안전보건관리비 사전집행 승인 확인", "method": "우수: 집행승인 적정(5점)\n미흡: 집행승인 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": true}]}, {"num": 5, "title": "안전보건관리책임자등의 충실한 업무수행 지원", "ref": "법 제4조 1항, 시행령 제4조 제5항", "items": [{"id": "r33", "no": 1, "criteria": "■ 안전보건총괄책임자 선임\n 1) 선임서류 작성 및 보관 여부\n 2) 선임일자(발령일자,공사 시작일,변경일)일치 여부\n 3) 작업장 순회점검 업무 이행 여부\n   - 현장소장 참석 확인", "method": "우수: 집행승인 적정(5점)\n미흡: 집행승인 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": true}, {"id": "r34", "no": 2, "criteria": "■ 안전보건관리책임자 선임(20억 이상 공사)\n 1) 대상자 : 원청 및 협력업체 소장(하수급인)\n 2) 선임서류 작성 및 보관 여부\n 3) 선임일자 (발령일자,공사 시작일,변경일) 일치 여부\n 4) 협력사 관리책임자 안전활동 실시 여부", "method": "우수: 집행승인 적정(5점)\n미흡: 집행승인 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": true}, {"id": "r35", "no": 3, "criteria": "■ 관리감독자 선임\n 1) 대상자 지정 및 명단 작성 여부(협력업체 포함)\n 2) 관리감독자 지정 서류 보관 여부\n 3) 업무분장 작성 및 보관 여부\n 4) 관리감독자 업무 수행 적정 여부\n     - 업무분장표상 역할\n     - 관리감독자 업무일지 작성 여부", "method": "우수: 집행승인 적정(5점)\n미흡: 집행승인 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": true}, {"id": "r36", "no": 4, "criteria": "■ 산업안전보건관리비 계상금액 100% 이상 집행 지원 유무\n   - 산업안전보건관리비 外 안전보건활동 지원\n    (안전시설물 공사내역 반영 件 등)", "method": "우수: 지원 적정(10점)\n미흡: 지원 부적정(0점)", "good": 10, "mid": 5, "low": 0, "weight": 10, "twoOpt": true}]}, {"num": 6, "title": "산업안전보건법에 따른 전문인력 배치", "ref": "법 제4조 1항, 시행령 제4조 제6항", "items": [{"id": "r39", "no": 1, "criteria": "■ 안전관리자, 보건관리자 선임\n 1) 선임서류 작성 및 보관 여부(선임일 확인)\n 2) 자격증 및 재직증명서 보관 여부", "method": "우수: 모두 적정(5점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": true}, {"id": "r40", "no": 2, "criteria": "■ 안전관리자, 보건관리자 업무전담\n 1) 안전 · 보건 업무 전담 여부\n   - 업무일지 확인", "method": "우수: 모두 전담(5점)\n미흡: 일부 겸업(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": true}, {"id": "r41", "no": 3, "criteria": "■ 안전·보건관리자의 지도·조언업무\n 1) 안전·보건기술에 관한한 지도·조언\n    - 안전·보건업무일지 내용 확인\n 2) 지도·조언에 의한 조치사항 이행결과     \n    - 순회점검 지시사항 조치내용 확인", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r42", "no": 4, "criteria": "■ 계층별 직무교육 이수(신규 및 보수)\n 1) 안전보건관리책임자(원청, 20억 이상 협력업체)\n 2) 안전관리자\n 3) 보건관리자\n 4) 관리감독자(반기 8시간)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 7, "title": "종사자 의견 청취 절차마련, 청취 및 개선방안 마련ㆍ이행 여부 점검", "ref": "법 제4조 1항, 시행령 제4조 제7항", "items": [{"id": "r45", "no": 1, "criteria": "■ 노사협의체 및 산업안전보건위원회 운영\n 1) 대상:120억(토목150억)이상 협력업체 구성 여부\n 2) 사용자, 근로자 위원 동수 구성 여부\n 3) 20억 이상 관계수급인 구성 여부 \n 4) 근로자대표 선임 여부(지정서 확인)\n 5) 2개월/1회 실시 여부, 공사 착공 후 2개월 이내 실시 여부\n 6) 회의 내용 기록 및 보존 여부(사진, 서명지 포함)\n 7) 현장소장 회의 참석 여부 확인\n 8) 심의의결사항 게시 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r46", "no": 2, "criteria": "■ 노사협의체 심의의결 이행\n 1) 심의 의결 이행사항 기록 있음\n 2) 심의 의결 사항만 기록 되어 있음\n 3) 심의 의결 사항 없음 또는 반복적인 사항만 있음", "method": "우수: 이행기록 있음(5점)\n보통: 의결사항만 있음(3점)\n미흡: 의결 사항 없음 또는 \n반복적 사항만 관리(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r47", "no": 3, "criteria": "■ 안전보건협의체 회의 운영(노사협의체 운영시 미실시)\n 1) 도급인, 수급인 구성 여부\n 2) 1개월/1회 실시 여부\n 3) 협의내용 적합 여부\n 4) 회의 내용 기록 및 보존 여부(사진, 서명지 포함)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r48", "no": 4, "criteria": "■ 안전보건관리규정 작성\n 1) 근로자대표 동의 여부 \n 2) 심의 의결 사항 반영 여부\n 3) 규정의 작성시기 및 심의 의결시기의 적정성", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r49", "no": 5, "criteria": "■ 종사자 의견을 반영한 개선방안 이행 점검 서류\n 1) 종사자의 의견에 따른 개선방안 이행 여부\n 2) 제안자에게 개선결과 피드백 실시 여부\n   - 월간 2건 이상", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 8, "title": "중대산업재해 발생 시 등 조치 매뉴얼 마련 및 조치 여부 점검", "ref": "법 제4조 1항, 시행령 제4조 제8항", "items": [{"id": "r52", "no": 1, "criteria": "■ 현장여건에 맞는 중대산업재해 매뉴얼 수립 여부\n 1) 화재, 폭발, 추락, 흙막이 붕괴, 장비 사고 등\n 2) 비상대응 조직도 수립 여부\n 3) 내외부 연락체계 작성 및 게시 여부\n 4) 비상시 개인별 업무분장표 작성 및 숙지여부\n   - 인터뷰: 원도급인 관리감독자1 / 하수급인 관리감독자1", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r53", "no": 2, "criteria": "■ 비상사태대비훈련 실시\n 1) 반기별 실시 여부\n 2) 계층별 참여도(직원,근로자,협력업체)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r54", "no": 3, "criteria": "■ 비상사태훈련 Feed Back 실시\n 1) 실시결과보고서 작성 여부\n 2) 훈련결과 미흡사항 및 보완대책", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 9, "title": "도급, 용역, 위탁 시 평가기준ㆍ절차 및 관리비용, 업무수행기관 관련 기준 마련ㆍ이행 여부 점검", "ref": "법 제4조 1항, 시행령 제4조 제9항", "items": [{"id": "r57", "no": 1, "criteria": "■ 도급, 용역, 위탁 등을 받는 자의 산업재해 예방을 위한 \n    조치 능력과 기술에 관한 평가기준ㆍ절차\n 1) 협력업체 평가표 작성 여부\n 2) 미흡 업체 Feed-Back 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r58", "no": 2, "criteria": "■ 도급, 용역, 위탁 등을 받는 자의 안전ㆍ보건을 위한 \n    관리비용에 관한 기준\n 1) 협력사 산업안전보건관리비 월별 집행 여부\n 2) 협력사 산업안전보건관리비 사용계획 수립 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r59", "no": 3, "criteria": "■ 도급, 용역, 위탁 등을 받는 자의 안전ㆍ보건을 위한 \n    공사기간에 관한 기준\n 1) 협력사 전체 공정에 대한 공사기간 적정성 근거 확인\n      (예정공정표, 인원 투입 계획 등)\n 2) 협력사 전체 공정에 대한 안전관리계획 수립 여부\n   - 각 협력사 안전관리계획 수립 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 10, "title": "재해발생 시 재발방지 대책의 수립 및 그 이행에 관한 조치", "ref": "법 제4조 제1항 제2호", "items": [{"id": "r62", "no": 1, "criteria": "■ 재발방지대책\n 1) 재발방지계획 수립 여부\n 2) 재발방지계획 토의 여부 (참석자 확인)\n   - 현장소장/관리감독자/협력사소장/협력사대표 등", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r63", "no": 2, "criteria": "■ 수립된 대책 이행에 관한 조치 결과\n 1) 관리감독자 전파 실시 여부\n 2) 근로자 전파(교육) 실시 여부\n   - 협력사 대표 실시 여부 확인\n 3) 이행결과 학인(현장)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r64", "no": 3, "criteria": "■ 재해발생시 관계기관 보고의 적정성 유무\n 1) 당사 보고체계 준수 여부 \n   - 12시간 이내 서면보고\n 2) 고용노동부\n    : 발생일로 부터 1개월 이내 산업재해조사표 제출 \n      (중대재해는 지체없이)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 11, "title": "중앙행정기관ㆍ지방자치단체가 관계 법령에 따라 개선, 시정 등을 명한 사항의 이행에 관한 조치", "ref": "법 제4조 제1항 제3호", "items": [{"id": "r67", "no": 1, "criteria": "■ 중앙행정기관, 지방자치단체등 외부기관 점검에 대한 \n    결과서 관리여부\n 1) 관계기관 점검 본사 보고 여부\n 2) 관계기관으로부터 개선·시정명령 받은 문서의 관리 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r68", "no": 2, "criteria": "■ 시정명령에 대한 조치 여부\n  1) 시정명령에 대해 조치사항 발송·기록관리 여부(공문 포함)\n  2) 조치결과에 대한 지속 이행여부 (현장확인)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 12, "title": "유해ㆍ위험 작업에 대한 안전ㆍ보건 교육의 실시 여부를 점검", "ref": "법 제4조 제1항 제4호, 시행령 제5조 제2항 제3호", "items": [{"id": "r71", "no": 1, "criteria": "■ 안전보건교육(관리감독자)\n 1) 정기교육 연간 16시간 이상\n 2) 채용 시 교육 8시간 이상\n 3) 관리감독자 지정서 명단과 교육실시 일치 확인\n 4) 법적교육내용 포함 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r72", "no": 2, "criteria": "■ 안전보건교육(근로자 정기안전교육)\n 1) 매반기 12시간 이상 실시 여부\n 2) 교육서류 작성 여부(서명지 및 사진대지)\n 3) 작업일보 또는 출력일보 명단 일치 여부 확인\n 4) 법적교육내용 포함 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r73", "no": 3, "criteria": "■ 안전보건교육(특별안전교육)\n 1) 해당 교육대상별 이수시간 준수여부\n 2) 교육서류 작성 여부(서명지 및 사진대지)\n 3) 공종별 대상자 교육 여부 확인(작업일보)\n 4) 법적교육내용 포함 여부\n 5) 타워크레인 신호작업 근로자 8시간이상", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r74", "no": 4, "criteria": "■ 안전보건교육(채용시안전교육ㆍ작업내용변경시 교육)\n 1) 기초안전보건교육 이수 확인\n 2) 교육서류 작성 여부(서명지 및 사진대지)\n 3) 작업일보 또는 출력일보 명단 일치 여부 확인\n 4) 법적교육내용 포함 여부\n 5) 일용근로자 1시간 이상, 제외 근로자 8시간 이상", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r75", "no": 5, "criteria": "■ 안전보건교육(특수형태근로자)\n 1) 최초 노무제공시 교육 2시간 /  단기간, 간헐적 작업 1시간\n 2) 특별교육 16시간 이상(최초 4시간, 12시간 3개월내 분할)\n 3) 교육서류 작성 여부(서명지 및 사진대지)\n 4) 작업일보 또는 출력일보 명단 일치 여부 확인 (건설기계 확인)\n 5) 법적교육내용 포함 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}, {"num": 13, "title": "안전ㆍ보건 관계 법령에 따른 의무 이행 여부에 대한 점검", "ref": "법 제4조 제1항 제4호, 시행령 제5조 제2항 제1호", "items": [{"id": "r78", "no": 1, "criteria": "■ 법령 요지 등 게시\n 1) 법령 요지 게시(사무실, 안전교육장)\n 2) 근로자가 쉽게 볼수 있는 장소 게시 여부\n 3) 안전보건관리규정 게시(사무실, 안전교육장)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r79", "no": 2, "criteria": "■ 유해위험방지계획서\n 1) 자체심사 및 확인점검 결과서 작성 및 보관 여부\n 2) 변경 사항 반영 여부 \n    (주요공법 및 작업방법 변경시 계획서 변경 이력관리)\n 3) 관리책임자 변경 이력 관리 상황", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r80", "no": 3, "criteria": "■ 공사안전보건대장 이행확인 점검\n 1) 점검결과서 및 조치사항 작성 및 보관 여부\n 2) 변경 사항 반영 여부\n 3) 점검결과 주기 준수 여부(3개월마다)", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r81", "no": 4, "criteria": "■ 건설기계 및 안전인증 대상 건설장비\n 1) 설치,해체,인상등 작업계획 수립여부\n 2) 법정 안전검사 外 진행사항\n 3) 안전검사 준수 여부(완성검사,정기검사,비파괴 등)\n 4) 사용연한 준수여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r82", "no": 5, "criteria": "■ 물질안전보건자료\n 1) 취급하는 대상물질 1종당 자료 보관 및 현장 게시\n 2) 취급 작업자 교육 및 적절한 조치 여부\n 3) 사용 용기 경고표지 부착", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r83", "no": 6, "criteria": "■ 허가및관리대상유해물질 취급\n 1) 특별안전보건교육 실시여부\n 2) 특별관리물질 취급일지 작성 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r84", "no": 7, "criteria": "■ 건강검진(특수건강검진)\n 1) 유해인자 노출 작업자 배치 전 건강검진 실시 여부\n 2) 유해인자별 정한 시기 및 주기에 따라 건강검진 여부\n 3) 2차건강진단 대상자 건강진단 실시 여부\n 4) 안전보건관리규정에 특수건강진단 실시 시기 규정여부\n 5) 건강진단 결과에 따른 사후관리 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}, {"id": "r85", "no": 8, "criteria": "■ 작업환경측정\n 1) 작업환경측정 여부 확인(착공 1개월내, 6개월마다)\n 2) 허용기준치 초과시 측정기간 단축 및 조치여부\n 3) 유해인자측정 누락 여부 확인\n 4) 작업환경측정 결과 근로자 공지 여부\n 5) 노출기준 초과 시 개선계획 보고 여부", "method": "우수: 모두 적정(5점)\n보통: 일부만 적정(3점)\n미흡: 모두 부적정(0점)", "good": 5, "mid": 3, "low": 0, "weight": 5, "twoOpt": false}]}]
+;
+
+const ALL_ITEMS = [];
+SECTIONS.forEach(sec => sec.items.forEach(it => ALL_ITEMS.push({...it, sectionNum:sec.num})));
+const TOTAL_ITEMS = ALL_ITEMS.length;
+const TOTAL_WEIGHT = ALL_ITEMS.reduce((s,it)=>s+it.weight,0);
+
+const DEFAULT_SITE_SEED = [
+  {id:'site1', name:'현장 1'}, {id:'site2', name:'현장 2'}, {id:'site3', name:'현장 3'},
+  {id:'site4', name:'현장 4'}, {id:'site5', name:'현장 5'}
+];
+const MAX_SITES = 24;
+
+/* ====================== PERIODS (상반기/하반기) ====================== */
+function buildPeriodOptions(){
+  const y = new Date().getFullYear();
+  const opts = [];
+  [y-1, y, y+1].forEach(yr=>{
+    opts.push({ key: yr+'-H1', label: yr+'년 상반기' });
+    opts.push({ key: yr+'-H2', label: yr+'년 하반기' });
+  });
+  return opts;
+}
+const PERIOD_OPTIONS = buildPeriodOptions();
+function defaultPeriodKey(){
+  const now = new Date();
+  return now.getFullYear()+'-'+((now.getMonth()+1)<=6 ? 'H1':'H2');
+}
+function periodLabel(key){
+  const found = PERIOD_OPTIONS.find(p=>p.key===key);
+  if(found) return found.label;
+  const [y,h] = key.split('-');
+  return y+'년 '+(h==='H1'?'상반기':'하반기');
+}
+function recKey(period, siteId){ return period+'__'+siteId; }
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/* ====================== STATE ====================== */
+let db = null;
+let downloadsCap = null;
+
+/* ---- Firebase 연동 / 일반 브라우저 다운로드 (GitHub Pages 등 외부 호스팅용) ---- */
+function initFirebaseDb(){
+  try{
+    if(!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.apiKey){
+      console.warn("firebase-config.js에 설정값이 없습니다. 저장 기능이 꺼진 상태로 동작합니다.");
+      return null;
+    }
+    if(typeof firebase === "undefined"){
+      console.warn("Firebase SDK를 불러오지 못했습니다.");
+      return null;
+    }
+    if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
+    return firebase.firestore();
+  }catch(e){ console.warn("Firebase 초기화 실패", e); return null; }
+}
+function browserSave({filename, data}){
+  return new Promise(resolve=>{
+    const blob = (data instanceof Blob) ? data : new Blob([data]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 4000);
+    resolve();
+  });
+}
+let currentPeriod = defaultPeriodKey();
+let siteRegistry = {};        // siteId -> {name, order}
+let siteOrder = [];           // ordered siteIds
+let recordData = {};          // recKey -> {inspector, date, [itemId]:{rating,note}}
+let recordExists = {};        // recKey -> bool
+let recordPhotos = {};        // recKey -> [{id,itemId,data}]
+let currentView = 'dashboard'; // 'dashboard' | siteId
+const noteTimers = {};
+let activeRecordUnsubs = [];
+const subscribedSiteIds = new Set();
+let lightbox = { period:null, siteId:null, itemId:null, index:0 };
+
+DEFAULT_SITE_SEED.forEach((s,i)=>{ siteRegistry[s.id] = { name: s.name, order: i }; });
+siteOrder = DEFAULT_SITE_SEED.map(s=>s.id);
+
+/* ====================== SCORING ====================== */
+function computeRecord(siteId){
+  const data = recordData[recKey(currentPeriod, siteId)] || {};
+  const sections = SECTIONS.map(sec => {
+    let score=0, weight=0, answered=0;
+    sec.items.forEach(it => {
+      const rec = data[it.id];
+      if(!rec || !rec.rating) return;
+      answered++;
+      if(rec.rating === 'na') return;
+      weight += it.weight;
+      score += rec.rating==='good' ? it.good : rec.rating==='mid' ? it.mid : it.low;
+    });
+    const pct = weight>0 ? (score/weight*100) : null;
+    return { num:sec.num, title:sec.title, score, weight, pct, answered, total: sec.items.length };
+  });
+  const overall = sections.reduce((acc,s)=>({
+    score: acc.score+s.score, weight: acc.weight+s.weight,
+    answered: acc.answered+s.answered, total: acc.total+s.total
+  }), {score:0, weight:0, answered:0, total:0});
+  overall.pct = overall.weight>0 ? (overall.score/overall.weight*100) : null;
+  return { sections, overall };
+}
+
+function band(pct){
+  if(pct===null || pct===undefined) return 'empty';
+  if(pct>=80) return 'good';
+  if(pct>=60) return 'mid';
+  return 'low';
+}
+function bandColorVar(b){
+  return b==='good' ? 'var(--good)' : b==='mid' ? 'var(--mid)' : b==='low' ? 'var(--low)' : 'var(--ink-faint)';
+}
+function fmtPct(pct){ return pct===null||pct===undefined ? '—' : (Math.round(pct*10)/10).toFixed(1)+'%'; }
+function siteName(siteId){ return (siteRegistry[siteId] && siteRegistry[siteId].name) || siteId; }
+
+/* ====================== TOAST (replaces blocked alert()) ====================== */
+let toastTimer = null;
+function toast(msg){
+  let el = document.getElementById('toast');
+  if(!el){ el = document.createElement('div'); el.id='toast'; el.className='toast'; document.body.appendChild(el); }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove('show'), 3600);
+}
+
+/* ====================== PERSISTENCE ====================== */
+function buildItemRecord(period, siteId, id, overrides){
+  const existing = (recordData[recKey(period,siteId)] && recordData[recKey(period,siteId)][id]) || {};
+  const rec = {...existing, ...overrides};
+  const clean = {};
+  if(rec.rating) clean.rating = rec.rating;
+  if(rec.note) clean.note = rec.note;
+  return clean;
+}
+
+async function persist(period, siteId, patch){
+  const key = recKey(period, siteId);
+  recordData[key] = {...(recordData[key]||{}), ...patch};
+  if(currentView===siteId && currentPeriod===period) syncSiteView(siteId);
+  if(currentView==='dashboard' && currentPeriod===period) renderDashboard();
+  renderTabs();
+  if(!db) return;
+  try{
+    const ref = db.doc('records/'+key);
+    if(recordExists[key]){
+      await ref.update(patch);
+    } else {
+      await ref.set({...recordData[key]});
+      recordExists[key] = true;
+    }
+  } catch(e){
+    try{
+      await db.doc('records/'+key).set({...recordData[key]});
+      recordExists[key] = true;
+    }catch(e2){ console.warn('저장 실패', key, e2); }
+  }
+}
+
+function setRating(period, siteId, itemId, rating){
+  const key = recKey(period, siteId);
+  const cur = recordData[key] && recordData[key][itemId];
+  const nextRating = (cur && cur.rating===rating) ? undefined : rating; // toggle off if same
+  const rec = buildItemRecord(period, siteId, itemId, { rating: nextRating, note: cur ? cur.note : undefined });
+  persist(period, siteId, { [itemId]: rec });
+}
+
+function setNote(period, siteId, itemId, note){
+  const key = recKey(period, siteId);
+  clearTimeout(noteTimers[key+':'+itemId]);
+  noteTimers[key+':'+itemId] = setTimeout(()=>{
+    const cur = recordData[key] && recordData[key][itemId];
+    const rec = buildItemRecord(period, siteId, itemId, { rating: cur?cur.rating:undefined, note });
+    persist(period, siteId, { [itemId]: rec });
+  }, 500);
+}
+
+function setRecordField(period, siteId, field, value){
+  const key = recKey(period, siteId);
+  clearTimeout(noteTimers[key+':'+field]);
+  recordData[key] = {...(recordData[key]||{}), [field]: value};
+  renderTabs();
+  if(currentView==='dashboard' && currentPeriod===period) renderDashboard();
+  noteTimers[key+':'+field] = setTimeout(()=> persist(period, siteId, { [field]: value }), 400);
+}
+
+function setSiteName(siteId, value){
+  siteRegistry[siteId] = {...(siteRegistry[siteId]||{}), name: value};
+  renderTabs();
+  if(currentView==='dashboard') renderDashboard();
+  clearTimeout(noteTimers['name:'+siteId]);
+  noteTimers['name:'+siteId] = setTimeout(async ()=>{
+    if(!db) return;
+    try{ await db.doc('siteRegistry/'+siteId).update({ name: value }); }
+    catch(e){
+      try{ await db.doc('siteRegistry/'+siteId).set({...siteRegistry[siteId]}); }
+      catch(e2){ console.warn('현장명 저장 실패', e2); }
+    }
+  }, 400);
+}
+
+/* ====================== SITE ADD / REMOVE ====================== */
+async function addSite(){
+  if(siteOrder.length >= MAX_SITES){ toast(`현장은 최대 ${MAX_SITES}개까지 추가할 수 있습니다.`); return; }
+  const newId = 'site_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const order = siteOrder.length;
+  const name = `현장 ${order+1}`;
+  siteRegistry[newId] = { name, order };
+  siteOrder = [...siteOrder, newId];
+  currentView = newId;
+  renderMain();
+  if(db){
+    try{ await db.doc('siteRegistry/'+newId).set({ name, order, createdAt: new Date().toISOString() }); }
+    catch(e){ console.warn('현장 추가 실패', e); toast('현장 추가 중 문제가 발생했습니다.'); }
+  }
+}
+
+function removeSite(siteId){
+  const btn = document.getElementById('removeSiteBtn');
+  if(!btn) return;
+  if(btn.dataset.armed !== '1'){
+    btn.dataset.armed = '1';
+    btn.dataset.label = btn.textContent;
+    btn.textContent = '다시 누르면 삭제됩니다';
+    btn.classList.add('danger-armed');
+    setTimeout(()=>{
+      if(btn.dataset.armed==='1'){ btn.dataset.armed='0'; btn.textContent = btn.dataset.label; btn.classList.remove('danger-armed'); }
+    }, 3000);
+    return;
+  }
+  delete siteRegistry[siteId];
+  siteOrder = siteOrder.filter(id=>id!==siteId);
+  currentView = 'dashboard';
+  renderMain();
+  toast('현장을 목록에서 제거했습니다. 이미 입력된 기록은 보존됩니다.');
+  if(db){ db.doc('siteRegistry/'+siteId).delete().catch(e=>console.warn('현장 제거 실패', e)); }
+}
+
+/* ====================== PHOTOS ====================== */
+const PHOTO_PRESETS = {
+  small:  { maxDim:640,  quality:0.6  },
+  medium: { maxDim:1100, quality:0.75 },
+  large:  { maxDim:1600, quality:0.85 }
+};
+const PHOTO_SAFE_LEN = 250000; // keep well under the 256 KiB per-document cap
+
+/* on-screen photo LAYOUT size (display size, not file weight/quality) */
+const PHOTO_DISPLAY_PX = { small:72, medium:96, large:144 };
+let photoDisplaySize = 'medium';
+function applyPhotoDisplaySize(){
+  document.documentElement.style.setProperty('--thumb-size', PHOTO_DISPLAY_PX[photoDisplaySize]+'px');
+}
+function setPhotoDisplaySize(size){
+  if(!PHOTO_DISPLAY_PX[size]) return;
+  photoDisplaySize = size;
+  applyPhotoDisplaySize();
+  document.querySelectorAll('#photoSizeToggle button[data-size]').forEach(b=>{
+    b.classList.toggle('active', b.dataset.size===size);
+  });
+}
+
+function compressImage(file, presetKey){
+  const preset = PHOTO_PRESETS[presetKey] || PHOTO_PRESETS.medium;
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = ()=> reject(reader.error);
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=> reject(new Error('image decode failed'));
+      img.onload = ()=>{
+        try{
+          let {width, height} = img;
+          const maxDim = preset.maxDim;
+          if(width > maxDim || height > maxDim){
+            if(width >= height){ height = Math.round(height*maxDim/width); width = maxDim; }
+            else{ width = Math.round(width*maxDim/height); height = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          let quality = preset.quality;
+          let dataUrl = canvas.toDataURL('image/jpeg', quality);
+          while(dataUrl.length > PHOTO_SAFE_LEN && quality > 0.25){
+            quality -= 0.1;
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+          }
+          resolve(dataUrl);
+        }catch(e){ reject(e); }
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function genLocalId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+/* 항목당 미리 지정된 4개의 사진칸(슬롯). 한 칸에는 사진을 최대 3장까지 담을 수 있습니다. */
+const MAX_PHOTO_SLOTS = 4;
+const MAX_PHOTOS_PER_SLOT = 3;
+
+async function addPhoto(period, siteId, itemId, file, presetKey, blockId){
+  if(!file || file.type.indexOf('image/')!==0) return;
+  let dataUrl;
+  try{ dataUrl = await compressImage(file, presetKey); }
+  catch(e){ console.warn('이미지 처리 실패', e); toast('사진을 처리하지 못했습니다.'); return; }
+
+  const key = recKey(period, siteId);
+  const bId = blockId || genLocalId(); // 지정된 칸(blockId)이 있으면 그 칸에, 없으면 새 칸을 만들어 담음
+  if(db){
+    try{
+      await db.doc('records/'+key).collection('photos').add({ itemId, data: dataUrl, createdAt: new Date().toISOString(), blockId: bId, fit:'cover', caption:'' });
+      return; // live snapshot will refresh the UI
+    }catch(e){ console.warn('사진 저장 실패', e); }
+  }
+  const photoId = 'local'+Date.now()+Math.random().toString(36).slice(2,8);
+  recordPhotos[key] = [...(recordPhotos[key]||[]), { id: photoId, itemId, data: dataUrl, blockId: bId, fit:'cover', caption:'' }];
+  if(currentView===siteId && currentPeriod===period) refreshPhotoThumbs(siteId);
+}
+
+async function deletePhoto(period, siteId, photoId){
+  const key = recKey(period, siteId);
+  if(db){
+    try{ await db.doc('records/'+key).collection('photos').doc(photoId).delete(); return; }
+    catch(e){ console.warn('사진 삭제 실패', e); }
+  }
+  recordPhotos[key] = (recordPhotos[key]||[]).filter(p=>p.id!==photoId);
+  if(currentView===siteId && currentPeriod===period) refreshPhotoThumbs(siteId);
+}
+
+/* apply a small field patch to one photo doc (fit / blockId), optimistic local update first */
+async function updatePhotoField(period, siteId, photoId, patch){
+  const key = recKey(period, siteId);
+  recordPhotos[key] = (recordPhotos[key]||[]).map(p=> p.id===photoId ? {...p, ...patch} : p);
+  if(currentView===siteId && currentPeriod===period) refreshPhotoThumbs(siteId);
+  if(db){
+    try{ await db.doc('records/'+key).collection('photos').doc(photoId).update(patch); }
+    catch(e){ console.warn('사진 정보 수정 실패', e); }
+  }
+}
+
+/* 한 칸(blockId)에 담긴 사진 전체의 채움/여백맞춤을 함께 전환 */
+function toggleSlotFit(period, siteId, blockId){
+  const key = recKey(period, siteId);
+  const photos = (recordPhotos[key]||[]).filter(p=>p.blockId===blockId);
+  if(!photos.length) return;
+  const nextFit = photos[0].fit==='contain' ? 'cover' : 'contain';
+  photos.forEach(p=> updatePhotoField(period, siteId, p.id, { fit: nextFit }));
+}
+
+/* group an item's photos (in order) into 사진칸(블록) runs by blockId — a PDF frame per group, max 3 photos per frame */
+function groupPhotosByBlock(photos){
+  const groups = [];
+  photos.forEach(p=>{
+    const last = groups[groups.length-1];
+    if(last && last.blockId===p.blockId && last.photos.length<3) last.photos.push(p);
+    else groups.push({ blockId:p.blockId, photos:[p] });
+  });
+  return groups;
+}
+
+/* 설명(캡션)은 한 칸(blockId)의 모든 사진에 동일하게 적용. 타이핑 중에는 즉시 저장하지 않고
+   500ms 동안 입력이 멈추면 저장 — 매 키 입력마다 서버 왕복이 생기지 않도록 함 */
+const captionTimers = {};
+function setSlotCaption(period, siteId, blockId, text){
+  const key = recKey(period, siteId);
+  recordPhotos[key] = (recordPhotos[key]||[]).map(p=> p.blockId===blockId ? {...p, caption:text} : p);
+  if(!db) return;
+  clearTimeout(captionTimers[blockId]);
+  captionTimers[blockId] = setTimeout(async ()=>{
+    const photos = (recordPhotos[key]||[]).filter(p=>p.blockId===blockId);
+    for(const p of photos){
+      try{ await db.doc('records/'+key).collection('photos').doc(p.id).update({ caption: text }); }
+      catch(e){ console.warn('사진 설명 저장 실패', e); }
+    }
+  }, 500);
+}
+
+function photoSlotsHtml(period, siteId, itemId){
+  const photos = (recordPhotos[recKey(period,siteId)]||[]).filter(p=>p.itemId===itemId);
+  const groups = groupPhotosByBlock(photos);
+  let html = '';
+  for(let i=0; i<MAX_PHOTO_SLOTS; i++){
+    const g = groups[i];
+    if(!g){
+      html += `<div class="photo-slot empty" data-slot-new="1" data-item="${itemId}" title="사진 추가"><span class="slot-plus">+</span></div>`;
+      continue;
+    }
+    const shown = g.photos.slice(0,3);
+    const n = shown.length;
+    const cellsHtml = shown.map(p=>{
+      const idx = photos.indexOf(p);
+      return `
+        <div class="slot-cell">
+          <img src="${p.data}" data-item="${itemId}" data-index="${idx}" alt="증빙사진" style="object-fit:${p.fit==='contain'?'contain':'cover'}">
+          <button class="photo-del-btn" data-photo="${p.id}" title="삭제">×</button>
+        </div>`;
+    }).join('');
+    const fitLabel = shown[0].fit==='contain' ? '여백맞춤' : '꽉채움';
+    const canAddMore = g.photos.length < MAX_PHOTOS_PER_SLOT;
+    html += `
+      <div class="photo-slot" data-block="${escapeAttr(g.blockId)}">
+        <input type="text" class="slot-caption-input" data-block="${escapeAttr(g.blockId)}" placeholder="사진 설명 입력" value="${escapeAttr(shown[0].caption||'')}" maxlength="60">
+        <div class="slot-grid n${n}">${cellsHtml}</div>
+        <div class="slot-tools">
+          <button class="tt-fit" data-block="${escapeAttr(g.blockId)}" title="사진을 꽉 채울지 여백을 두고 맞출지 전환">${fitLabel}</button>
+          <button class="tt-addmore" data-block="${escapeAttr(g.blockId)}" data-item="${itemId}" ${canAddMore?'':'disabled'} title="${canAddMore?'이 칸에 사진 합치기 (최대 3장)':'이 칸은 최대 3장까지 담을 수 있습니다'}">사진 합치기</button>
+        </div>
+      </div>`;
+  }
+  return html;
+}
+
+function refreshPhotoThumbs(siteId){
+  if(currentView !== siteId) return;
+  ALL_ITEMS.forEach(it=>{
+    const el = document.getElementById('photos-'+it.id);
+    if(!el) return;
+    /* 사진 설명을 입력 중이면 다시 그리지 않음 — 그리지 않아도 입력값은 이미 recordPhotos에 반영되어 있어 안전 */
+    if(el.contains(document.activeElement) && document.activeElement.classList && document.activeElement.classList.contains('slot-caption-input')) return;
+    el.innerHTML = photoSlotsHtml(currentPeriod, siteId, it.id);
+  });
+}
+
+/* ====================== PHOTO PREVIEW MODAL ====================== */
+let photoPreviewState = null; // { period, siteId, itemId, files, urls, preset, targetBlockId }
+
+function openPhotoPreview(period, siteId, itemId, files, targetBlockId){
+  if(!files || !files.length) return;
+  if(photoPreviewState) photoPreviewState.urls.forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} });
+  photoPreviewState = {
+    period, siteId, itemId,
+    files,
+    urls: files.map(f=> URL.createObjectURL(f)),
+    preset: 'medium',
+    targetBlockId: targetBlockId || null
+  };
+  renderPhotoPreview();
+  const modal = document.getElementById('photoPreviewModal');
+  modal.hidden = false;
+  const saveBtn = document.getElementById('ppmSaveBtn');
+  saveBtn.disabled = false; saveBtn.textContent = '사진 저장';
+}
+
+function closePhotoPreview(){
+  const modal = document.getElementById('photoPreviewModal');
+  if(modal) modal.hidden = true;
+  if(photoPreviewState){
+    photoPreviewState.urls.forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} });
+    photoPreviewState = null;
+  }
+}
+
+function renderPhotoPreview(){
+  if(!photoPreviewState) return;
+  const grid = document.getElementById('ppmGrid');
+  if(grid){
+    grid.innerHTML = photoPreviewState.urls.map((u,i)=>`<div class="ppm-thumb"><img src="${u}" alt="사진 미리보기 ${i+1}"></div>`).join('');
+  }
+  const countEl = document.getElementById('ppmCount');
+  if(countEl) countEl.textContent = `사진 ${photoPreviewState.files.length}장`;
+  document.querySelectorAll('.ppm-size-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.preset===photoPreviewState.preset);
+  });
+}
+
+function setPhotoPreviewPreset(preset){
+  if(!photoPreviewState || !PHOTO_PRESETS[preset]) return;
+  photoPreviewState.preset = preset;
+  renderPhotoPreview();
+}
+
+async function confirmPhotoPreview(){
+  if(!photoPreviewState) return;
+  const { period, siteId, itemId, files, preset, targetBlockId } = photoPreviewState;
+  const saveBtn = document.getElementById('ppmSaveBtn');
+  if(saveBtn){ saveBtn.disabled = true; saveBtn.textContent = '저장 중…'; }
+
+  const key = recKey(period, siteId);
+  const existing = (recordPhotos[key]||[]).filter(p=>p.itemId===itemId);
+  const groups = groupPhotosByBlock(existing);
+  let blockId = targetBlockId;
+  let capacity;
+  if(blockId){
+    const g = groups.find(x=>x.blockId===blockId);
+    capacity = MAX_PHOTOS_PER_SLOT - (g ? g.photos.length : 0);
+  } else {
+    if(groups.length >= MAX_PHOTO_SLOTS){
+      toast(`사진칸은 최대 ${MAX_PHOTO_SLOTS}개까지 만들 수 있습니다.`);
+      closePhotoPreview();
+      return;
+    }
+    blockId = genLocalId();
+    capacity = MAX_PHOTOS_PER_SLOT;
+  }
+  const toSave = files.slice(0, Math.max(0,capacity));
+  const skipped = files.length - toSave.length;
+  for(const f of toSave){ await addPhoto(period, siteId, itemId, f, preset, blockId); }
+  if(skipped > 0){ toast(`한 칸에는 사진을 최대 ${MAX_PHOTOS_PER_SLOT}장까지 담을 수 있어 ${skipped}장은 저장되지 않았습니다.`); }
+  closePhotoPreview();
+}
+
+function wirePhotoPreviewModalOnce(){
+  document.getElementById('ppmClose').addEventListener('click', closePhotoPreview);
+  document.getElementById('ppmCancel').addEventListener('click', closePhotoPreview);
+  document.getElementById('ppmSaveBtn').addEventListener('click', confirmPhotoPreview);
+  document.getElementById('photoPreviewModal').addEventListener('click', (e)=>{ if(e.target.id==='photoPreviewModal') closePhotoPreview(); });
+  document.querySelectorAll('.ppm-size-btn').forEach(b=>{
+    b.addEventListener('click', ()=> setPhotoPreviewPreset(b.dataset.preset));
+  });
+  document.addEventListener('keydown', (e)=>{
+    const modal = document.getElementById('photoPreviewModal');
+    if(modal.hidden) return;
+    if(e.key==='Escape') closePhotoPreview();
+  });
+}
+
+/* ====================== LIGHTBOX ====================== */
+function openLightbox(period, siteId, itemId, index){
+  lightbox = { period, siteId, itemId, index };
+  renderLightbox();
+  document.getElementById('lightbox').hidden = false;
+}
+function closeLightbox(){ document.getElementById('lightbox').hidden = true; }
+function renderLightbox(){
+  const photos = (recordPhotos[recKey(lightbox.period, lightbox.siteId)]||[]).filter(p=>p.itemId===lightbox.itemId);
+  if(!photos.length){ closeLightbox(); return; }
+  if(lightbox.index >= photos.length) lightbox.index = photos.length-1;
+  if(lightbox.index < 0) lightbox.index = 0;
+  const p = photos[lightbox.index];
+  document.getElementById('lbImg').src = p.data;
+  document.getElementById('lbCount').textContent = `${lightbox.index+1} / ${photos.length}`;
+  document.getElementById('lbPrev').disabled = lightbox.index<=0;
+  document.getElementById('lbNext').disabled = lightbox.index>=photos.length-1;
+  document.getElementById('lbDel').onclick = ()=>{ deletePhoto(lightbox.period, lightbox.siteId, p.id); closeLightbox(); };
+}
+function lightboxNav(delta){ lightbox.index += delta; renderLightbox(); }
+
+function wireLightboxOnce(){
+  document.getElementById('lbClose').addEventListener('click', closeLightbox);
+  document.getElementById('lbPrev').addEventListener('click', ()=> lightboxNav(-1));
+  document.getElementById('lbNext').addEventListener('click', ()=> lightboxNav(1));
+  document.getElementById('lightbox').addEventListener('click', (e)=>{ if(e.target.id==='lightbox') closeLightbox(); });
+  document.addEventListener('keydown', (e)=>{
+    const lb = document.getElementById('lightbox');
+    if(lb.hidden) return;
+    if(e.key==='Escape') closeLightbox();
+    if(e.key==='ArrowLeft') lightboxNav(-1);
+    if(e.key==='ArrowRight') lightboxNav(1);
+  });
+}
+
+/* which 사진칸(blockId)의 hidden file input을 통해 새 파일이 들어올지 기록해두는 상태값.
+   null이면 빈 슬롯의 "+" — 새 칸을 만듦. 값이 있으면 그 칸에 사진을 합침(최대 3장). */
+let pendingPhotoTargetBlockId = null;
+
+/* delegated handler wired ONCE on the persistent #app node (avoids listener
+   accumulation across re-renders, since innerHTML replaces children but not #app itself) */
+function wireAppDelegationOnce(){
+  const app = document.getElementById('app');
+  app.addEventListener('click', (e)=>{
+    if(currentView==='dashboard' || !siteRegistry[currentView]) return;
+    const siteId = currentView;
+    const period = currentPeriod;
+    const slotImg = e.target.closest('.slot-cell img');
+    if(slotImg){ openLightbox(period, siteId, slotImg.dataset.item, Number(slotImg.dataset.index)); return; }
+    const emptySlot = e.target.closest('.photo-slot.empty');
+    if(emptySlot){
+      pendingPhotoTargetBlockId = null;
+      const inp = document.getElementById('photoInput-'+emptySlot.dataset.item);
+      if(inp) inp.click();
+      return;
+    }
+    const addMoreBtn = e.target.closest('.tt-addmore');
+    if(addMoreBtn){
+      if(addMoreBtn.disabled) return;
+      pendingPhotoTargetBlockId = addMoreBtn.dataset.block;
+      const inp = document.getElementById('photoInput-'+addMoreBtn.dataset.item);
+      if(inp) inp.click();
+      return;
+    }
+    const delBtn = e.target.closest('.photo-del-btn');
+    if(delBtn){ deletePhoto(period, siteId, delBtn.dataset.photo); return; }
+    const fitBtn = e.target.closest('.tt-fit');
+    if(fitBtn){ toggleSlotFit(period, siteId, fitBtn.dataset.block); return; }
+  });
+  app.addEventListener('input', (e)=>{
+    if(currentView==='dashboard' || !siteRegistry[currentView]) return;
+    const capInput = e.target.closest('.slot-caption-input');
+    if(capInput){ setSlotCaption(currentPeriod, currentView, capInput.dataset.block, capInput.value); return; }
+  });
+}
+
+/* ====================== RENDER: TABS ====================== */
+function renderTabs(){
+  const tabs = document.getElementById('tabs');
+  let html = `<button class="tab ${currentView==='dashboard'?'active':''}" data-view="dashboard">종합 현황</button>`;
+  siteOrder.forEach(id=>{
+    const {overall} = computeRecord(id);
+    const b = band(overall.pct);
+    html += `<button class="tab ${currentView===id?'active':''}" data-view="${id}">${escapeHtml(siteName(id))}
+      <span class="pct band-${b}">${overall.pct===null?'미착수':fmtPct(overall.pct)}</span></button>`;
+  });
+  html += `<button class="tab tab-add" id="addSiteBtn" type="button" title="현장 추가">+ 현장</button>`;
+  tabs.innerHTML = html;
+  tabs.querySelectorAll('.tab[data-view]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ currentView = btn.dataset.view; renderMain(); window.scrollTo({top:0,behavior:'instant'}); });
+  });
+  const addBtn = document.getElementById('addSiteBtn');
+  if(addBtn) addBtn.addEventListener('click', addSite);
+}
+
+/* ====================== RENDER: DASHBOARD ====================== */
+function buildBarChartSvg(rows){
+  if(!rows.length) return `<div class="chart-empty">비교할 현장이 없습니다. 현장을 추가해 주세요.</div>`;
+  const rowH = 32, gap = 12, top = 26, labelW = 128, plotW = 380, rightPad = 56;
+  const totalH = top + rows.length*(rowH+gap);
+  const svgW = labelW + plotW + rightPad;
+  const marks = [0,25,50,75,100];
+  let grid = marks.map(v=>{
+    const x = labelW + v/100*plotW;
+    return `<line x1="${x}" y1="${top-12}" x2="${x}" y2="${totalH-gap+2}" style="stroke:var(--border-soft)" stroke-width="1"/>
+      <text x="${x}" y="${top-16}" font-size="10" style="fill:var(--ink-faint)" text-anchor="middle" font-family="'IBM Plex Mono',monospace">${v}%</text>`;
+  }).join('');
+  let bars = rows.map((r,i)=>{
+    const y = top + i*(rowH+gap);
+    const b = band(r.pct);
+    const colorVar = bandColorVar(b);
+    const w = r.pct ? Math.min(100,r.pct)/100*plotW : 0;
+    const label = r.name.length>11 ? r.name.slice(0,11)+'…' : r.name;
+    return `
+      <text x="${labelW-10}" y="${y+rowH/2+4}" font-size="12" style="fill:var(--ink)" text-anchor="end" font-weight="600">${escapeHtml(label)}</text>
+      <rect x="${labelW}" y="${y}" width="${plotW}" height="${rowH}" rx="6" style="fill:var(--surface-2)"/>
+      <rect x="${labelW}" y="${y}" width="${w}" height="${rowH}" rx="6" style="fill:${colorVar}"/>
+      <text x="${labelW+w+10}" y="${y+rowH/2+4}" font-size="12" font-weight="700" style="fill:${colorVar}" font-family="'IBM Plex Mono',monospace">${r.pct===null?'미착수':Math.round(r.pct)+'%'}</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${svgW} ${totalH}" style="width:100%; height:auto; max-width:640px; display:block;">${grid}${bars}</svg>`;
+}
+
+function renderDashboard(){
+  const app = document.getElementById('app');
+  const rows = siteOrder.map(id=>{
+    const { overall } = computeRecord(id);
+    return { id, name: siteName(id), pct: overall.pct, score: overall.score, weight: overall.weight, answered: overall.answered };
+  });
+
+  let cards = siteOrder.map(id=>{
+    const { overall } = computeRecord(id);
+    const b = band(overall.pct);
+    const d = recordData[recKey(currentPeriod,id)] || {};
+    return `
+    <button class="site-card" data-view="${id}">
+      <div class="name">${escapeHtml(siteName(id))}</div>
+      <div class="meta">${escapeHtml(d.inspector||'점검자 미입력')}${d.date?(' · '+escapeHtml(d.date)):''}</div>
+      <div class="gauge-row">
+        <div class="gauge-num" style="color:${bandColorVar(b)}">${overall.pct===null?'—':Math.round(overall.pct)+'%'}</div>
+        <div class="gauge-bar"><i style="width:${overall.pct?Math.min(100,overall.pct):0}%; background:${bandColorVar(b)}"></i></div>
+      </div>
+      <div class="progress-line">획득 ${overall.score}점 / 배점 ${overall.weight}점 &nbsp;·&nbsp; 응답 ${overall.answered}/${TOTAL_ITEMS}문항</div>
+    </button>`;
+  }).join('');
+  if(!cards){
+    cards = `<div class="chart-empty" style="grid-column:1/-1;">아직 등록된 현장이 없습니다. 상단 탭의 "+ 현장"을 눌러 추가해 주세요.</div>`;
+  }
+
+  let matrixHead = '<th style="min-width:170px;">평가 항목</th>' + siteOrder.map(id=>`<th>${escapeHtml(siteName(id))}</th>`).join('');
+  let matrixRows = SECTIONS.map(sec=>{
+    let cells = siteOrder.map(id=>{
+      const s = computeRecord(id).sections.find(x=>x.num===sec.num);
+      const b = band(s.pct);
+      return `<td><span class="cell-pct band-${b}">${s.pct===null?'–':Math.round(s.pct)+'%'}</span></td>`;
+    }).join('');
+    return `<tr><td class="rowhead">${sec.num}. ${escapeHtml(sec.title)}</td>${cells}</tr>`;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="dash-title-row">
+      <h2>${escapeHtml(periodLabel(currentPeriod))} 종합 현황</h2>
+      <span class="hint">중대재해처벌법 서류심사 결과 · 현장 ${siteOrder.length}개소</span>
+    </div>
+    <div class="dash-grid">${cards}</div>
+    <div class="section-title-row"><h2>현장별 종합 이행률</h2><span class="hint">배점 대비 획득점수 비율(%)</span></div>
+    <div class="chart-card">${buildBarChartSvg(rows)}</div>
+    <div class="section-title-row"><h2>항목별 환산점수 비교</h2><span class="hint">13개 항목 · "해당없음" 응답 제외</span></div>
+    <div class="matrix-wrap"><table class="matrix"><thead><tr>${matrixHead}</tr></thead><tbody>${matrixRows}</tbody></table></div>
+    <p class="foot-note">전체 배점 ${TOTAL_WEIGHT}점(총 ${TOTAL_ITEMS}개 문항, "해당없음" 응답은 배점·점수에서 제외) · 원본 서식 「■ 안전보건 사고예방 확인점검(법적서류 분야)」 기준 · 기간이 바뀌면 각 현장의 점검 기록은 별도로 저장됩니다.</p>
+  `;
+  app.querySelectorAll('.site-card').forEach(c=>{
+    c.addEventListener('click', ()=>{ currentView=c.dataset.view; renderMain(); window.scrollTo({top:0,behavior:'instant'}); });
+  });
+}
+
+/* ====================== RENDER: SITE VIEW ====================== */
+function renderSiteView(siteId){
+  const period = currentPeriod;
+  const app = document.getElementById('app');
+  const d = recordData[recKey(period,siteId)] || {};
+  const {sections, overall} = computeRecord(siteId);
+  const b = band(overall.pct);
+  const circumference = 2*Math.PI*40;
+  const dash = overall.pct===null ? 0 : Math.min(100,overall.pct)/100*circumference;
+
+  let chips = SECTIONS.map(sec=>{
+    const s = sections.find(x=>x.num===sec.num);
+    return `<button class="chip" data-jump="sec-${sec.num}"><span class="dot" style="background:${bandColorVar(band(s.pct))}"></span>${sec.num}. ${escapeHtml(sec.title.slice(0,14))}${sec.title.length>14?'…':''}</button>`;
+  }).join('');
+
+  let sectionsHtml = SECTIONS.map((sec,idx)=>{
+    const s = sections.find(x=>x.num===sec.num);
+    const sb = band(s.pct);
+    let itemsHtml = sec.items.map(it=>{
+      const rec = d[it.id] || {};
+      const scored = rec.rating ? (rec.rating==='na'?null: rec.rating==='good'?it.good:rec.rating==='mid'?it.mid:it.low) : undefined;
+      const scoreLabel = !rec.rating ? `배점 ${it.weight}점 · 미응답`
+        : rec.rating==='na' ? `해당없음 (배점 제외)`
+        : `배점 ${it.weight}점 · 획득 ${scored}점`;
+      const buttons = [
+        ['good','우수'], ...(it.twoOpt?[]:[['mid','보통']]), ['low','미흡'], ['na','해당없음']
+      ].map(([val,label])=>`<button class="rate-btn" data-val="${val}" data-item="${it.id}">${label}</button>`).join('');
+      return `
+      <div class="item">
+        <div class="item-head">
+          <div class="item-no">${it.no}</div>
+          <div class="item-crit">${escapeHtml(it.criteria)}</div>
+        </div>
+        <div class="item-method">${escapeHtml(it.method)}</div>
+        <div class="rate-row" id="rate-${it.id}">${buttons}<span class="item-score" id="score-${it.id}">${scoreLabel}</span></div>
+        <div class="note-wrap"><textarea id="note-${it.id}" data-item="${it.id}" placeholder="문제점 및 개선요청 사항 / 사진대지 메모">${escapeHtml(rec.note||'')}</textarea></div>
+        <div class="photo-wrap">
+          <div class="photo-strip" id="photos-${it.id}">${photoSlotsHtml(period, siteId, it.id)}</div>
+          <input type="file" id="photoInput-${it.id}" accept="image/*" multiple style="display:none">
+        </div>
+      </div>`;
+    }).join('');
+
+    return `
+    <details class="section-card" id="sec-${sec.num}" ${idx===0?'open':''}>
+      <summary>
+        <svg class="sec-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="sec-heading">
+          <span class="t"><span class="num">${sec.num}.</span> ${escapeHtml(sec.title)}</span>
+          <div class="ref">${escapeHtml(sec.ref)}</div>
+        </div>
+        <div class="sec-subtotal">
+          <div class="sec-bar"><i id="secbar-${sec.num}" style="width:${s.pct?Math.min(100,s.pct):0}%; background:${bandColorVar(sb)}"></i></div>
+          <div class="sec-num-lbl" id="seclbl-${sec.num}">${s.score}/${s.weight}점 · ${fmtPct(s.pct)}</div>
+        </div>
+      </summary>
+      ${itemsHtml}
+    </details>`;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="site-header">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 96 96">
+          <circle cx="48" cy="48" r="40" fill="none" stroke="var(--surface-2)" stroke-width="9"/>
+          <circle id="ringProgress" cx="48" cy="48" r="40" fill="none" stroke="${bandColorVar(b)}" stroke-width="9"
+            stroke-linecap="round" stroke-dasharray="${dash} ${circumference}"/>
+        </svg>
+        <div class="ring-num mono" id="ringNum" style="color:${bandColorVar(b)}">${overall.pct===null?'—':Math.round(overall.pct)+'%'}</div>
+      </div>
+      <div class="site-fields">
+        <input id="field-name" value="${escapeAttr(siteName(siteId))}" placeholder="현장명" />
+        <div class="field-row">
+          <div class="field"><label>점검자</label><input id="field-inspector" value="${escapeAttr(d.inspector||'')}" placeholder="이름 / 직급" style="width:130px"></div>
+          <div class="field"><label>점검일자</label><input id="field-date" type="date" value="${escapeAttr(d.date||'')}"></div>
+          <div class="field"><label>점검기간</label><input value="${escapeAttr(periodLabel(period))}" disabled style="width:110px; opacity:.75;"></div>
+        </div>
+      </div>
+      <div class="site-stats">
+        <div class="stat"><div class="v mono" id="statScore">${overall.score}/${overall.weight}</div><div class="l">획득점수/배점</div></div>
+        <div class="stat"><div class="v mono" id="statAnswered">${overall.answered}/${TOTAL_ITEMS}</div><div class="l">응답 문항</div></div>
+        <div class="photo-size-toggle" id="photoSizeToggle" title="사진 표시 크기">
+          <button type="button" data-size="small" class="${photoDisplaySize==='small'?'active':''}">사진 작게</button>
+          <button type="button" data-size="medium" class="${photoDisplaySize==='medium'?'active':''}">보통</button>
+          <button type="button" data-size="large" class="${photoDisplaySize==='large'?'active':''}">크게</button>
+        </div>
+        <button class="print-btn" id="printBtn">PDF로 저장</button>
+        <button class="print-btn danger-btn" id="removeSiteBtn" title="현장 목록에서 제거 (기존 점검 기록은 보존됩니다)">현장 제거</button>
+      </div>
+    </div>
+    <div class="chip-nav">${chips}</div>
+    ${sectionsHtml}
+    <div class="summary-card">
+      <div class="summary-head">
+        <h3>종합의견</h3>
+        <span class="hint">현장 점검 결과에 대한 총평 및 후속조치 필요사항을 기록하세요 · PDF 보고서 마지막 장에 포함됩니다.</span>
+      </div>
+      <textarea id="field-summary" placeholder="예) 위험성평가 및 안전보건교육 관리는 양호하나, 협력업체 계약서류 일부 보완 필요. 차기 점검 시 재확인 요망.">${escapeHtml(d.summary||'')}</textarea>
+    </div>
+    <p class="foot-note">평가방법 표기(우수/보통/미흡)에 따라 배점이 자동 산정됩니다 · "해당없음" 선택 시 해당 문항은 배점·환산점수 계산에서 제외됩니다.</p>
+  `;
+
+  app.querySelectorAll('.rate-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> setRating(period, siteId, btn.dataset.item, btn.dataset.val));
+  });
+  app.querySelectorAll('textarea[id^="note-"]').forEach(ta=>{
+    ta.addEventListener('input', ()=> setNote(period, siteId, ta.dataset.item, ta.value));
+  });
+  document.getElementById('field-name').addEventListener('input', e=> setSiteName(siteId, e.target.value));
+  document.getElementById('field-inspector').addEventListener('input', e=> setRecordField(period, siteId,'inspector', e.target.value));
+  document.getElementById('field-date').addEventListener('input', e=> setRecordField(period, siteId,'date', e.target.value));
+  document.getElementById('field-summary').addEventListener('input', e=> setRecordField(period, siteId,'summary', e.target.value));
+  document.getElementById('printBtn').addEventListener('click', ()=> openPdfPreview(period, siteId));
+  document.getElementById('removeSiteBtn').addEventListener('click', ()=> removeSite(siteId));
+  document.getElementById('photoSizeToggle').querySelectorAll('button[data-size]').forEach(b=>{
+    b.addEventListener('click', ()=> setPhotoDisplaySize(b.dataset.size));
+  });
+  app.querySelectorAll('.chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      const target = document.getElementById(c.dataset.jump);
+      if(target){ target.open = true; target.scrollIntoView({behavior:'smooth', block:'start'}); }
+    });
+  });
+
+  app.querySelectorAll('input[id^="photoInput-"]').forEach(inp=>{
+    inp.addEventListener('change', (e)=>{
+      const itemId = inp.id.replace('photoInput-','');
+      const files = Array.from(e.target.files || []).filter(f=> f.type.indexOf('image/')===0);
+      const targetBlockId = pendingPhotoTargetBlockId;
+      pendingPhotoTargetBlockId = null;
+      if(files.length) openPhotoPreview(period, siteId, itemId, files, targetBlockId);
+      inp.value = '';
+    });
+  });
+
+  syncSiteView(siteId);
+}
+
+/* incremental refresh: updates numbers/active states without rebuilding DOM (keeps focus in text inputs) */
+function syncSiteView(siteId){
+  if(currentView !== siteId) return;
+  const period = currentPeriod;
+  const d = recordData[recKey(period,siteId)] || {};
+  const {sections, overall} = computeRecord(siteId);
+  const b = band(overall.pct);
+
+  const nameEl = document.getElementById('field-name');
+  if(nameEl && document.activeElement!==nameEl){
+    const val = siteName(siteId);
+    if(nameEl.value !== val) nameEl.value = val;
+  }
+  [['field-inspector','inspector'], ['field-date','date']].forEach(([elId,f])=>{
+    const el = document.getElementById(elId);
+    if(el && document.activeElement!==el){
+      const val = d[f] || '';
+      if(el.value !== val) el.value = val;
+    }
+  });
+  const summaryEl = document.getElementById('field-summary');
+  if(summaryEl && document.activeElement!==summaryEl){
+    const val = d.summary || '';
+    if(summaryEl.value !== val) summaryEl.value = val;
+  }
+
+  const ringNum = document.getElementById('ringNum');
+  if(ringNum){ ringNum.textContent = overall.pct===null?'—':Math.round(overall.pct)+'%'; ringNum.style.color = bandColorVar(b); }
+  const ringProg = document.getElementById('ringProgress');
+  if(ringProg){
+    const circumference = 2*Math.PI*40;
+    const dash = overall.pct===null?0:Math.min(100,overall.pct)/100*circumference;
+    ringProg.setAttribute('stroke-dasharray', `${dash} ${circumference}`);
+    ringProg.setAttribute('stroke', bandColorVar(b));
+  }
+  const statScore = document.getElementById('statScore'); if(statScore) statScore.textContent = `${overall.score}/${overall.weight}`;
+  const statAnswered = document.getElementById('statAnswered'); if(statAnswered) statAnswered.textContent = `${overall.answered}/${TOTAL_ITEMS}`;
+
+  sections.forEach(s=>{
+    const bar = document.getElementById('secbar-'+s.num);
+    const lbl = document.getElementById('seclbl-'+s.num);
+    const sb = band(s.pct);
+    if(bar){ bar.style.width = (s.pct?Math.min(100,s.pct):0)+'%'; bar.style.background = bandColorVar(sb); }
+    if(lbl){ lbl.textContent = `${s.score}/${s.weight}점 · ${fmtPct(s.pct)}`; }
+  });
+
+  ALL_ITEMS.forEach(it=>{
+    const rec = d[it.id];
+    const rating = rec ? rec.rating : undefined;
+    const group = document.getElementById('rate-'+it.id);
+    if(group){
+      group.querySelectorAll('.rate-btn').forEach(btn=> btn.classList.toggle('active', btn.dataset.val===rating));
+    }
+    const scoreEl = document.getElementById('score-'+it.id);
+    if(scoreEl){
+      const scored = rating ? (rating==='na'?null: rating==='good'?it.good:rating==='mid'?it.mid:it.low) : undefined;
+      scoreEl.textContent = !rating ? `배점 ${it.weight}점 · 미응답`
+        : rating==='na' ? `해당없음 (배점 제외)`
+        : `배점 ${it.weight}점 · 획득 ${scored}점`;
+    }
+    const noteEl = document.getElementById('note-'+it.id);
+    if(noteEl && document.activeElement!==noteEl){
+      const val = (rec&&rec.note)||'';
+      if(noteEl.value !== val) noteEl.value = val;
+    }
+  });
+}
+
+function renderMain(){
+  renderTabs();
+  if(currentView==='dashboard' || !siteRegistry[currentView]){
+    currentView = 'dashboard';
+    renderDashboard();
+  } else {
+    renderSiteView(currentView);
+  }
+}
+
+/* ====================== PDF EXPORT ====================== */
+const PRINT_RATING_LABEL = { good:'우수', mid:'보통', low:'미흡', na:'해당없음' };
+const PRINT_RATING_COLOR = { good:'#1E8A5F', mid:'#B8790E', low:'#C0392B', na:'#7C8A99' };
+
+/* large photo evidence frame for the PDF report — same idea as a 사진대지:
+   1 photo fills the frame, 2 sit side by side, 3 stack one-over-two, all shown large
+   (not small thumbnails). Each photo's own 채움/맞춤(cover·contain) toggle from the
+   editing screen carries through here; a 사진칸(슬롯)에 합쳐진 사진들은 하나의 프레임으로
+   묶여 보이고, 슬롯에 입력한 설명(caption)은 프레임 위 진한 남색 띠로 표시됩니다. */
+function printPhotoFrameHtml(groupPhotos){
+  if(!groupPhotos.length) return '';
+  const shown = groupPhotos.slice(0,3);
+  const n = shown.length;
+  const cellStyle = 'overflow:hidden;background:#fff;border-radius:3px;';
+  const imgStyleFor = p => `width:100%;height:100%;object-fit:${p.fit==='contain'?'contain':'cover'};display:block;`;
+  let gridStyle, cellsHtml;
+  if(n===1){
+    gridStyle = 'grid-template-columns:1fr;';
+    cellsHtml = `<div style="${cellStyle}"><img src="${shown[0].data}" style="${imgStyleFor(shown[0])}"></div>`;
+  } else if(n===2){
+    gridStyle = 'grid-template-columns:1fr 1fr;';
+    cellsHtml = shown.map(p=>`<div style="${cellStyle}"><img src="${p.data}" style="${imgStyleFor(p)}"></div>`).join('');
+  } else {
+    gridStyle = 'grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;';
+    cellsHtml = `<div style="${cellStyle}grid-column:1 / span 2;"><img src="${shown[0].data}" style="${imgStyleFor(shown[0])}"></div>`
+      + shown.slice(1).map(p=>`<div style="${cellStyle}"><img src="${p.data}" style="${imgStyleFor(p)}"></div>`).join('');
+  }
+  const caption = (shown[0].caption || '').trim();
+  const captionHtml = caption
+    ? `<div style="background:#0F3A4F;color:#fff;font-weight:700;font-size:11.5px;text-align:center;padding:7px 6px;letter-spacing:.01em;">${escapeHtml(caption)}</div>`
+    : '';
+  /* min-width:0 so this sits cleanly as one cell inside the item's 4-column slot grid
+     (see printItemRowHtml) — grid stretches it to the column width automatically */
+  return `<div style="min-width:0;border:1px solid #C7D0D6;border-radius:6px;overflow:hidden;background:#fff;">
+    ${captionHtml}
+    <div style="padding:3px;display:grid;gap:3px;height:190px;background:#fff;${gridStyle}">${cellsHtml}</div>
+  </div>`;
+}
+
+function printItemRowHtml(period, siteId, it, rec){
+  const rating = rec && rec.rating;
+  const scored = rating ? (rating==='na' ? null : rating==='good'?it.good : rating==='mid'?it.mid : it.low) : undefined;
+  const c = rating ? PRINT_RATING_COLOR[rating] : '#9AA5AD';
+  const badgeLabel = rating ? PRINT_RATING_LABEL[rating] : '미응답';
+  const scoreTxt = !rating ? `배점 ${it.weight}점` : rating==='na' ? '배점 제외' : `배점 ${it.weight}점 · 획득 ${scored}점`;
+  const noteHtml = rec.note ? `<div style="font-size:11.5px;color:#4B5A68;background:#F5F8F9;border-radius:6px;padding:6px 8px;margin-top:6px;white-space:pre-wrap;">${escapeHtml(rec.note)}</div>` : '';
+  const photos = (recordPhotos[recKey(period,siteId)]||[]).filter(p=>p.itemId===it.id);
+  const groups = groupPhotosByBlock(photos);
+  /* 화면의 4칸 슬롯과 같은 순서로, 채워진 칸만 한 줄에 나란히 배치 (1~4칸 모두 4열 그리드
+     안에 놓여 항상 같은 크기를 유지 — 1장만 있어도 전체 폭으로 늘어나지 않음) */
+  const photosHtml = groups.length
+    ? `<div style="margin-top:8px;display:grid;grid-template-columns:repeat(${MAX_PHOTO_SLOTS},1fr);gap:6px;">${groups.map(g=> printPhotoFrameHtml(g.photos)).join('')}</div>`
+    : '';
+  return `
+  <div style="padding:9px 0;border-top:1px solid #E5EAEC;">
+    <div style="display:flex;gap:8px;align-items:flex-start;">
+      <div style="flex:0 0 auto;width:18px;height:18px;border-radius:5px;background:#F5F8F9;color:#7C8A99;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">${it.no}</div>
+      <div style="flex:1;font-size:12px;line-height:1.5;white-space:pre-wrap;color:#16212B;">${escapeHtml(it.criteria)}</div>
+      <div style="flex:0 0 auto;text-align:right;">
+        <span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:700;background:${c}22;color:${c};border:1px solid ${c}66;">${badgeLabel}</span>
+        <div style="font-size:10px;color:#7C8A99;margin-top:3px;">${scoreTxt}</div>
+      </div>
+    </div>
+    ${noteHtml}
+    ${photosHtml}
+  </div>`;
+}
+
+function buildHeaderChunk(period, siteId){
+  const d = recordData[recKey(period,siteId)] || {};
+  const { overall } = computeRecord(siteId);
+  const el = document.createElement('div');
+  el.style.cssText = 'font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif; padding:22px 6px 10px; color:#16212B;';
+  el.innerHTML = `
+    <div style="font-size:11px;color:#7C8A99;letter-spacing:.03em;margin-bottom:4px;">중대재해처벌법 이행점검 · 서류심사 결과보고 · ${escapeHtml(periodLabel(period))}</div>
+    <div style="font-size:24px;font-weight:700;margin-bottom:14px;">${escapeHtml(siteName(siteId))}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px;">
+      <tr>
+        <td style="padding:5px 0;color:#7C8A99;width:80px;">점검자</td><td style="padding:5px 0;font-weight:600;">${escapeHtml(d.inspector || '-')}</td>
+        <td style="padding:5px 0;color:#7C8A99;width:80px;">점검일자</td><td style="padding:5px 0;font-weight:600;">${escapeHtml(d.date || '-')}</td>
+      </tr>
+    </table>
+    <div style="display:flex;gap:22px;margin-top:14px;padding:14px 16px;background:#F5F8F9;border-radius:8px;">
+      <div><div style="font-size:20px;font-weight:700;">${overall.score}/${overall.weight}</div><div style="font-size:10.5px;color:#7C8A99;">획득점수/배점</div></div>
+      <div><div style="font-size:20px;font-weight:700;">${overall.pct===null?'-':Math.round(overall.pct)+'%'}</div><div style="font-size:10.5px;color:#7C8A99;">환산점수</div></div>
+      <div><div style="font-size:20px;font-weight:700;">${overall.answered}/${TOTAL_ITEMS}</div><div style="font-size:10.5px;color:#7C8A99;">응답 문항</div></div>
+    </div>`;
+  return el;
+}
+
+function buildSectionChunk(period, siteId, sec){
+  const s = computeRecord(siteId).sections.find(x=>x.num===sec.num);
+  const d = recordData[recKey(period,siteId)] || {};
+  const el = document.createElement('div');
+  el.style.cssText = 'font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif; padding:8px 6px 12px; color:#16212B;';
+  const itemsHtml = sec.items.map(it=> printItemRowHtml(period, siteId, it, d[it.id] || {})).join('');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #16212B;padding-bottom:6px;margin-bottom:8px;">
+      <div style="font-size:14px;font-weight:700;">${sec.num}. ${escapeHtml(sec.title)}</div>
+      <div style="font-size:12px;font-weight:600;color:#4B5A68;">${s.score}/${s.weight}점 · ${fmtPct(s.pct)}</div>
+    </div>
+    ${itemsHtml}`;
+  return el;
+}
+
+function buildSummaryChunk(period, siteId){
+  const d = recordData[recKey(period,siteId)] || {};
+  const summary = (d.summary||'').trim();
+  if(!summary) return null;
+  const el = document.createElement('div');
+  el.style.cssText = 'font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif; padding:14px 6px 22px; color:#16212B;';
+  el.innerHTML = `
+    <div style="border-bottom:2px solid #16212B;padding-bottom:6px;margin-bottom:10px;">
+      <div style="font-size:14px;font-weight:700;">종합의견</div>
+    </div>
+    <div style="font-size:12.5px;line-height:1.75;white-space:pre-wrap;background:#F5F8F9;border-radius:8px;padding:14px 16px;">${escapeHtml(summary)}</div>`;
+  return el;
+}
+
+function buildPrintChunks(period, siteId){
+  const chunks = [ buildHeaderChunk(period, siteId), ...SECTIONS.map(sec => buildSectionChunk(period, siteId, sec)) ];
+  const summaryChunk = buildSummaryChunk(period, siteId);
+  if(summaryChunk) chunks.push(summaryChunk);
+  return chunks;
+}
+
+/* ====================== PDF PREVIEW MODAL ====================== */
+let pdfPreviewSpec = null; // { period, siteId }
+
+function openPdfPreview(period, siteId){
+  pdfPreviewSpec = { period, siteId };
+  const body = document.getElementById('pdfPreviewBody');
+  body.innerHTML = '';
+  const sheet = document.createElement('div');
+  sheet.className = 'pdf-preview-sheet';
+  buildPrintChunks(period, siteId).forEach(chunk => sheet.appendChild(chunk));
+  body.appendChild(sheet);
+
+  const saveBtn = document.getElementById('pdfPreviewSaveBtn');
+  saveBtn.disabled = false; saveBtn.textContent = 'PDF 저장';
+  document.getElementById('pdfPreviewModal').hidden = false;
+}
+
+function closePdfPreview(){
+  const modal = document.getElementById('pdfPreviewModal');
+  if(modal) modal.hidden = true;
+  pdfPreviewSpec = null;
+  const saveBtn = document.getElementById('pdfPreviewSaveBtn');
+  if(saveBtn){ saveBtn.disabled = false; saveBtn.textContent = 'PDF 저장'; }
+}
+
+async function confirmPdfSave(){
+  if(!pdfPreviewSpec) return;
+  const { period, siteId } = pdfPreviewSpec;
+  const saveBtn = document.getElementById('pdfPreviewSaveBtn');
+  if(!saveBtn || saveBtn.disabled) return;
+  const original = saveBtn.textContent;
+  saveBtn.disabled = true;
+
+  if(typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined'){
+    saveBtn.textContent = '문서 도구 불러오는 중…';
+    for(let i=0; i<20 && (typeof window.jspdf==='undefined' || typeof window.html2canvas==='undefined'); i++){
+      await new Promise(r=>setTimeout(r,300));
+    }
+  }
+  if(typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined'){
+    toast('PDF 생성 도구를 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.');
+    saveBtn.disabled = false; saveBtn.textContent = original;
+    return;
+  }
+
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed; left:-99999px; top:0; width:800px; background:#ffffff;';
+  document.body.appendChild(host);
+
+  try{
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageW = 210, pageH = 297, margin = 10;
+    const contentW = pageW - margin*2;
+    let cursorY = margin;
+
+    function placeCanvas(canvas){
+      const imgW = contentW;
+      const imgH = canvas.height * imgW / canvas.width;
+      if(imgH > pageH - margin*2){
+        let remaining = imgH, srcY = 0;
+        while(remaining > 0.3){
+          if(cursorY >= pageH - margin - 5){ pdf.addPage(); cursorY = margin; }
+          const drawH = Math.min(pageH - margin - cursorY, remaining);
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = Math.max(1, Math.round(drawH * canvas.width / imgW));
+          sliceCanvas.getContext('2d').drawImage(
+            canvas, 0, Math.round(srcY*canvas.width/imgW), canvas.width, sliceCanvas.height,
+            0, 0, canvas.width, sliceCanvas.height
+          );
+          pdf.addImage(sliceCanvas.toDataURL('image/jpeg',0.9), 'JPEG', margin, cursorY, imgW, drawH);
+          cursorY += drawH; srcY += drawH; remaining -= drawH;
+          if(remaining > 0.3){ pdf.addPage(); cursorY = margin; }
+        }
+      } else {
+        if(cursorY + imgH > pageH - margin){ pdf.addPage(); cursorY = margin; }
+        pdf.addImage(canvas.toDataURL('image/jpeg',0.92), 'JPEG', margin, cursorY, imgW, imgH);
+        cursorY += imgH + 3;
+      }
+    }
+
+    const chunks = buildPrintChunks(period, siteId); // fresh DOM nodes, independent of the ones shown in the preview
+    for(let i=0; i<chunks.length; i++){
+      saveBtn.textContent = `PDF 생성 중… (${i+1}/${chunks.length})`;
+      host.innerHTML = '';
+      host.appendChild(chunks[i]);
+      const canvas = await window.html2canvas(chunks[i], { scale:1.5, backgroundColor:'#ffffff', useCORS:true });
+      placeCanvas(canvas);
+    }
+
+    const blob = pdf.output('blob');
+    const d = recordData[recKey(period,siteId)] || {};
+    const safeName = siteName(siteId).replace(/[\\/:*?"<>|]/g,'_');
+    const filename = `${safeName}_${period}_이행점검_${d.date || todayStr()}.pdf`;
+
+    if(downloadsCap){
+      saveBtn.textContent = '저장 확인 대기 중…';
+      try{
+        await downloadsCap.save({ filename, data: blob });
+        saveBtn.textContent = '저장 완료';
+        setTimeout(()=> closePdfPreview(), 1200);
+        return;
+      }catch(e){
+        if(e && e.code === 'declined'){ saveBtn.disabled = false; saveBtn.textContent = original; return; }
+        console.warn('downloads.save 실패', e);
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(()=> URL.revokeObjectURL(url), 60000);
+    closePdfPreview();
+  } catch(err){
+    console.error(err);
+    toast('PDF 생성 중 문제가 발생했습니다. 다시 시도해 주세요.');
+  } finally {
+    document.body.removeChild(host);
+    if(saveBtn.textContent !== '저장 완료'){ saveBtn.disabled = false; saveBtn.textContent = original; }
+  }
+}
+
+function wirePdfPreviewModalOnce(){
+  document.getElementById('pdfPreviewClose').addEventListener('click', closePdfPreview);
+  document.getElementById('pdfPreviewCancelBtn').addEventListener('click', closePdfPreview);
+  document.getElementById('pdfPreviewSaveBtn').addEventListener('click', confirmPdfSave);
+  document.getElementById('pdfPreviewModal').addEventListener('click', (e)=>{ if(e.target.id==='pdfPreviewModal') closePdfPreview(); });
+  document.addEventListener('keydown', (e)=>{
+    const modal = document.getElementById('pdfPreviewModal');
+    if(modal.hidden) return;
+    if(e.key==='Escape') closePdfPreview();
+  });
+}
+
+/* ====================== UTIL ====================== */
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ====================== BOOT / DB ====================== */
+function setSaveBadge(state){
+  const el = document.getElementById('saveBadge');
+  if(!el) return;
+  if(state==='live'){ el.textContent = '☁ 자동 저장 중 (팀 공유)'; el.classList.add('live'); }
+  else if(state==='local'){ el.textContent = '⚠ 저장 미지원 보기 · 새로고침 시 초기화'; el.classList.remove('live'); }
+  else { el.textContent = '연결 확인 중…'; el.classList.remove('live'); }
+}
+
+function initPeriodSelect(){
+  const sel = document.getElementById('periodSelect');
+  sel.innerHTML = PERIOD_OPTIONS.map(p=>`<option value="${p.key}">${p.label}</option>`).join('');
+  if(!PERIOD_OPTIONS.find(p=>p.key===currentPeriod)){
+    const opt = document.createElement('option');
+    opt.value = currentPeriod; opt.textContent = periodLabel(currentPeriod);
+    sel.appendChild(opt);
+  }
+  sel.value = currentPeriod;
+  sel.addEventListener('change', ()=> switchPeriod(sel.value));
+}
+
+function subscribeRecord(period, siteId){
+  if(!db) return;
+  subscribedSiteIds.add(siteId);
+  const key = recKey(period, siteId);
+  try{
+    const unsub1 = db.doc('records/'+key).onSnapshot(snap=>{
+      recordExists[key] = snap.exists;
+      if(snap.exists) recordData[key] = snap.data();
+      else if(!recordData[key]) recordData[key] = {};
+      renderTabs();
+      if(currentView===siteId && currentPeriod===period) syncSiteView(siteId);
+      if(currentView==='dashboard' && currentPeriod===period) renderDashboard();
+    }, err=>{ console.warn('record snapshot error', key, err); });
+    activeRecordUnsubs.push(unsub1);
+  }catch(e){ console.warn(e); }
+  try{
+    const unsub2 = db.doc('records/'+key).collection('photos').onSnapshot(snap=>{
+      recordPhotos[key] = snap.docs.map(doc=> ({ id: doc.id, ...doc.data() }));
+      if(currentView===siteId && currentPeriod===period) refreshPhotoThumbs(siteId);
+    }, err=>{ console.warn('photo snapshot error', key, err); });
+    activeRecordUnsubs.push(unsub2);
+  }catch(e){ console.warn(e); }
+}
+
+function subscribeAllForPeriod(period){
+  siteOrder.forEach(id => subscribeRecord(period, id));
+}
+function unsubscribeAllRecords(){
+  activeRecordUnsubs.forEach(fn=>{ try{ fn(); }catch(e){} });
+  activeRecordUnsubs = [];
+}
+
+function switchPeriod(newPeriod){
+  currentPeriod = newPeriod;
+  currentView = 'dashboard';
+  unsubscribeAllRecords();
+  subscribedSiteIds.clear();
+  if(db) subscribeAllForPeriod(currentPeriod);
+  renderMain();
+}
+
+async function boot(){
+  applyPhotoDisplaySize();
+  initPeriodSelect();
+  wireLightboxOnce();
+  wireAppDelegationOnce();
+  wirePhotoPreviewModalOnce();
+  wirePdfPreviewModalOnce();
+  renderTabs();
+  renderMain();
+  db = initFirebaseDb();
+
+  if(!db){ setSaveBadge('local'); return; }
+  setSaveBadge('live');
+
+  downloadsCap = { save: browserSave };
+
+  let registrySeeded = false;
+  try{
+    db.collection('siteRegistry').orderBy('order').onSnapshot(snap=>{
+      if(snap.empty && !registrySeeded){
+        registrySeeded = true;
+        Promise.all(DEFAULT_SITE_SEED.map((s,i)=>
+          db.doc('siteRegistry/'+s.id).set({ name: s.name, order: i, createdAt: new Date().toISOString() })
+        )).catch(e=> console.warn('초기 현장 생성 실패', e));
+        return; // the write triggers a fresh snapshot that populates the registry below
+      }
+      const newRegistry = {};
+      const newOrder = [];
+      snap.docs.forEach(doc=>{ newRegistry[doc.id] = doc.data(); newOrder.push(doc.id); });
+      siteRegistry = newRegistry;
+      siteOrder = newOrder;
+
+      const added = siteOrder.filter(id => !subscribedSiteIds.has(id));
+      added.forEach(id => subscribeRecord(currentPeriod, id));
+
+      if(currentView!=='dashboard' && !siteRegistry[currentView]) currentView = 'dashboard';
+      renderMain();
+    }, err=>{ console.warn('registry snapshot error', err); });
+  }catch(e){ console.warn(e); }
+}
+
+boot();
+</script>
+
+</body></html>

@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>안전관리 툴박스</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --ink:#17212c; --ink-soft:#525f6e; --ink-faint:#8a94a3;
+  --paper:#eef1f4; --surface:#ffffff; --surface-2:#f5f7f9; --surface-3:#eceff2;
+  --line:#dbe0e6; --line-soft:#e8ebef;
+  --accent:#1d5673; --accent-soft:#e4edf1; --accent-ink:#ffffff;
+  --hazard:#c97f16; --hazard-soft:#faf1e0;
+  --warn:#a5710f; --warn-soft:#fbf0dc;
+  --shadow: 0 1px 2px rgba(23,33,44,.05), 0 10px 28px rgba(23,33,44,.07);
+  --sidebar-w: 292px; --topbar-h: 56px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e7ecf1; --ink-soft:#aab5c2; --ink-faint:#7c8896;
+    --paper:#0d1218; --surface:#182029; --surface-2:#1d2731; --surface-3:#212c37;
+    --line:#2c3843; --line-soft:#242e38;
+    --accent:#7fbcdb; --accent-soft:#1c2e38; --accent-ink:#0c222c;
+    --hazard:#e0a24a; --hazard-soft:#332810;
+    --warn:#e0a24a; --warn-soft:#332810;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 30px rgba(0,0,0,.38);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e7ecf1; --ink-soft:#aab5c2; --ink-faint:#7c8896;
+  --paper:#0d1218; --surface:#182029; --surface-2:#1d2731; --surface-3:#212c37;
+  --line:#2c3843; --line-soft:#242e38;
+  --accent:#7fbcdb; --accent-soft:#1c2e38; --accent-ink:#0c222c;
+  --hazard:#e0a24a; --hazard-soft:#332810;
+  --warn:#e0a24a; --warn-soft:#332810;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 30px rgba(0,0,0,.38);
+}
+*{box-sizing:border-box}
+html,body{ height:100%; }
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:'Noto Sans KR', -apple-system, sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+.mono{ font-family:'IBM Plex Mono','Noto Sans KR',monospace; font-variant-numeric:tabular-nums; }
+button{ font-family:inherit; }
+
+.app{ display:flex; height:100vh; }
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  width:var(--sidebar-w); flex:0 0 auto; height:100vh; overflow-y:auto;
+  background:var(--surface-2); border-right:1px solid var(--line);
+  display:flex; flex-direction:column;
+}
+.brand{ padding:20px 20px 14px; }
+.eyebrow{
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  font-size:11.5px; font-weight:600; color:var(--ink-faint); letter-spacing:.05em;
+}
+.eyebrow .sq{ width:6px; height:6px; background:var(--hazard); flex:0 0 auto; transform:rotate(45deg); }
+.brand h1{
+  font-family:'Noto Serif KR',serif; font-weight:700; font-size:18px; margin:0;
+  letter-spacing:-.01em;
+}
+.nav{ flex:1; padding:6px 12px; display:flex; flex-direction:column; gap:4px; }
+.nav-item{
+  display:flex; align-items:flex-start; gap:11px; width:100%; text-align:left;
+  padding:11px 12px; border:1px solid transparent; border-radius:10px;
+  background:none; color:var(--ink); cursor:pointer;
+}
+.nav-item:hover{ background:var(--surface-3); }
+.nav-item.active{ background:var(--surface); border-color:var(--line); box-shadow:var(--shadow); }
+.nav-item.active .nav-icon{ background:var(--item-accent-soft, var(--accent-soft)); }
+.nav-icon{
+  width:32px; height:32px; border-radius:8px; flex:0 0 auto; font-size:15px;
+  display:flex; align-items:center; justify-content:center; background:var(--surface-3);
+}
+.nav-text{ min-width:0; }
+.nav-title{ font-size:13.3px; font-weight:700; line-height:1.35; }
+.nav-tag{
+  display:block; margin-top:3px; font-size:10.5px; font-weight:600; letter-spacing:.03em;
+  color:var(--item-accent, var(--accent));
+}
+.nav-slot{
+  display:flex; align-items:center; gap:11px; padding:11px 12px; margin-top:2px;
+  border:1.5px dashed var(--line); border-radius:10px; color:var(--ink-faint);
+}
+.nav-slot .nav-icon{ background:transparent; border:1.5px dashed var(--line); font-size:14px; }
+.nav-slot .nav-title{ font-size:12px; font-weight:600; }
+.nav-slot .nav-tag{ color:var(--ink-faint); font-weight:500; }
+
+.sidebar-foot{
+  padding:12px 20px 18px; border-top:1px solid var(--line-soft);
+  font-size:11px; color:var(--ink-faint); line-height:1.6;
+}
+.sidebar-foot .count{ color:var(--ink-soft); font-weight:700; }
+
+/* ---------- main ---------- */
+.main{ flex:1; min-width:0; height:100vh; display:flex; flex-direction:column; }
+.topbar{
+  height:var(--topbar-h); flex:0 0 auto; display:flex; align-items:center; gap:12px;
+  padding:0 18px; border-bottom:1px solid var(--line); background:var(--surface);
+}
+.tb-title{ font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tb-tag{
+  font-size:10.5px; font-weight:600; letter-spacing:.03em; padding:2px 9px; border-radius:999px;
+  color:var(--cur-accent, var(--accent)); background:var(--cur-accent-soft, var(--accent-soft));
+  white-space:nowrap;
+}
+.tb-spacer{ flex:1; }
+.tb-open{
+  display:inline-flex; align-items:center; gap:6px; font-size:12.3px; font-weight:600;
+  color:var(--ink-soft); background:var(--surface-2); border:1px solid var(--line);
+  border-radius:8px; padding:7px 12px; white-space:nowrap; text-decoration:none;
+}
+.tb-open:hover{ color:var(--accent); border-color:var(--accent); }
+
+.viewport{ position:relative; flex:1; min-height:0; background:var(--surface-3); }
+.viewport iframe{ width:100%; height:100%; border:0; display:block; background:var(--surface); }
+
+.loading{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  gap:10px; color:var(--ink-faint); font-size:12.8px; background:var(--surface-3);
+  transition:opacity .2s;
+}
+.loading .spin{
+  width:16px; height:16px; border-radius:50%; border:2px solid var(--line);
+  border-top-color:var(--accent); animation:spin .8s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.loading.hide{ opacity:0; pointer-events:none; }
+
+/* ---------- setup banner (firebase-config not filled in yet) ---------- */
+.setup-banner{
+  display:none; align-items:flex-start; gap:10px; margin:14px 16px 0;
+  background:var(--warn-soft); border:1px solid var(--warn); color:var(--ink);
+  border-radius:10px; padding:11px 13px; font-size:12px; line-height:1.6;
+}
+.setup-banner.show{ display:flex; }
+.setup-banner b{ color:var(--warn); }
+
+/* ---------- mobile ---------- */
+@media (max-width:760px){
+  .app{ flex-direction:column; }
+  .sidebar{
+    width:100%; height:auto; max-height:none; border-right:none; border-bottom:1px solid var(--line);
+    flex-direction:row; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; align-items:center;
+  }
+  .brand{ display:none; }
+  .nav{ flex-direction:row; padding:10px 12px; gap:8px; flex:none; }
+  .nav-item{ flex:0 0 auto; width:auto; flex-direction:row; padding:8px 12px; }
+  .nav-text{ display:flex; flex-direction:column; }
+  .nav-slot{ flex:0 0 auto; margin-top:0; }
+  .sidebar-foot{ display:none; }
+  .main{ height:auto; flex:1; min-height:0; }
+  .tb-tag{ display:none; }
+}
+@media (prefers-reduced-motion:reduce){ .loading .spin{ animation:none } }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="eyebrow"><span class="sq"></span>대라수건설(주) 안전보건경영실</div>
+      <h1>안전관리 툴박스</h1>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-foot"><span class="count mono" id="count"></span>개 도구 연결됨 · 새 도구가 만들어지면 계속 추가됩니다</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <span class="tb-title" id="tbTitle"></span>
+      <span class="tb-tag" id="tbTag"></span>
+      <span class="tb-spacer"></span>
+      <a class="tb-open" id="tbOpen" target="_blank" rel="noopener">새 탭에서 열기 ↗</a>
+    </div>
+    <div class="setup-banner" id="setupBanner"><span>⚠️</span><span><b>Firebase 설정이 아직 비어 있습니다.</b> 지금은 저장 없이 미리보기만 가능합니다. <code>firebase-config.js</code> 파일에 본인의 Firebase 프로젝트 설정값을 채워 넣으면 보고서·점검 점수가 실제로 저장되고 기기 간에 동기화됩니다. (배포 가이드 문서 참고)</span></div>
+    <div class="viewport">
+      <iframe id="frame" title="선택한 도구 미리보기" allow="camera; clipboard-read; clipboard-write"></iframe>
+      <div class="loading" id="loading"><span class="spin"></span>불러오는 중…</div>
+    </div>
+  </main>
+</div>
+
+<script src="firebase-config.js"></script>
+<script>
+/* ==========================================================================
+   등록된 도구 목록
+   새 도구를 추가하려면: 1) tools/폴더에 새 HTML 파일을 올리고
+   2) 이 배열에 객체 하나만 추가하면 됩니다.
+   accent: 'teal' | 'amber' | 'slate' — 아이콘 · 강조 색상 테마
+   ========================================================================== */
+const LINKS = [
+  {
+    title: "본사점검 보고서 관리",
+    tag: "보고서 · 현장점검",
+    url: "tools/hq-report.html",
+    emoji: "🦺",
+    accent: "teal"
+  },
+  {
+    title: "중대재해 이행점검 서류심사",
+    tag: "서류심사 · 이행점검",
+    url: "tools/disaster-review.html",
+    emoji: "🦺",
+    accent: "amber"
+  }
+];
+
+const ACCENTS = {
+  teal:  { c:"var(--accent)", s:"var(--accent-soft)" },
+  amber: { c:"var(--hazard)", s:"var(--hazard-soft)" },
+  slate: { c:"var(--ink-soft)", s:"var(--surface-3)" }
+};
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+let current = 0;
+
+function renderNav(){
+  const nav = document.getElementById("nav");
+  nav.innerHTML = LINKS.map((item,i)=>{
+    const a = ACCENTS[item.accent] || ACCENTS.teal;
+    return `<button class="nav-item${i===current?' active':''}" data-i="${i}" style="--item-accent:${a.c};--item-accent-soft:${a.s}">
+      <span class="nav-icon">${item.emoji}</span>
+      <span class="nav-text">
+        <span class="nav-title">${esc(item.title)}</span>
+        <span class="nav-tag">${esc(item.tag)}</span>
+      </span>
+    </button>`;
+  }).join("") + `<div class="nav-slot">
+      <span class="nav-icon">+</span>
+      <span class="nav-text">
+        <span class="nav-title">다음 도구 추가 예정</span>
+        <span class="nav-tag">새 파일이 생기면 여기에 표시됩니다</span>
+      </span>
+    </div>`;
+  nav.querySelectorAll(".nav-item").forEach(btn=>{
+    btn.addEventListener("click", ()=> selectItem(Number(btn.dataset.i)));
+  });
+  document.getElementById("count").textContent = LINKS.length;
+}
+
+function selectItem(i){
+  current = i;
+  const item = LINKS[i];
+  const a = ACCENTS[item.accent] || ACCENTS.teal;
+  document.getElementById("tbTitle").textContent = item.title;
+  const tag = document.getElementById("tbTag");
+  tag.textContent = item.tag;
+  tag.style.setProperty("--cur-accent", a.c);
+  tag.style.setProperty("--cur-accent-soft", a.s);
+  document.getElementById("tbOpen").href = item.url;
+  const loading = document.getElementById("loading");
+  loading.classList.remove("hide");
+  const frame = document.getElementById("frame");
+  frame.src = item.url;
+  renderNav();
+}
+
+document.getElementById("frame").addEventListener("load", ()=>{
+  document.getElementById("loading").classList.add("hide");
+});
+
+if(!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.apiKey || window.FIREBASE_CONFIG.apiKey.indexOf("여기에") === 0){
+  document.getElementById("setupBanner").classList.add("show");
+}
+
+renderNav();
+selectItem(0);
+</script>
+</body>
+</html>
