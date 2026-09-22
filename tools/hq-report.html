@@ -1,8 +1,11 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>본사점검 보고서 관리</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="../firebase-config.js"></script>
+<script>window.TOOL_KEY = "hq";</script>
+<script src="../auth.js"></script>
 <style>
 :root{
   --ink:#111417;
@@ -181,8 +184,8 @@ table{border-collapse:collapse;width:100%}
 .kinds span{margin-right:5mm;white-space:nowrap;font-size:10pt}
 .body-cell{height:137mm;vertical-align:top!important}
 .body-cell-sm{height:110mm;vertical-align:top!important}
-.body-text{white-space:pre-wrap;line-height:1.9;font-size:10.5pt}
-.find-cell{height:24mm;vertical-align:top!important;white-space:pre-wrap;line-height:1.8}
+.body-text{white-space:pre-wrap;line-height:1.9;font-size:10.5pt;word-break:keep-all;overflow-wrap:break-word}
+.find-cell{height:24mm;vertical-align:top!important;white-space:pre-wrap;line-height:1.8;word-break:keep-all;overflow-wrap:break-word}
 
 .blocks{display:flex;flex-direction:column;gap:6mm;flex:1}
 .block{border:0}
@@ -192,6 +195,8 @@ table{border-collapse:collapse;width:100%}
 .block .frame.n2{grid-template-columns:1fr 1fr}
 .block .frame.n3{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
 .block .frame.n3 img:first-child{grid-column:1 / span 2}
+.block .frame.n3 .ic:first-child{grid-column:1 / span 2}
+.block .frame.n4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
 .block .frame .ic{overflow:hidden;min-width:0;min-height:0;background:#fff;display:block}
 .block .frame img{width:100%;height:100%;display:block}
 .block table{border-collapse:collapse}
@@ -258,6 +263,7 @@ table{border-collapse:collapse;width:100%}
   <header class="bar">
     <h1>본사점검 <span>조치결과보고서</span> 관리</h1>
     <div class="spacer"></div>
+    <button class="ghost" id="btnImportList" title="JSON 작업파일(예: 오프라인 생성기에서 만든 파일)을 새 보고서로 불러옵니다">JSON 불러오기</button>
     <button class="primary" id="btnNew">+ 새 보고서</button>
   </header>
   <div class="listWrap">
@@ -278,6 +284,7 @@ table{border-collapse:collapse;width:100%}
     <div class="spacer"></div>
     <span class="hint" id="saveStatus" style="margin:0 4px"></span>
     <button class="ghost desk" id="btnXlsTop" title="사진 없이 표지·점검사항 텍스트만 포함됩니다">엑셀</button>
+    <button class="ghost desk" id="btnHtmlTop" title="사진이 포함된 HTML 파일 하나로 내보내, 다른 사람에게 공유할 수 있습니다">HTML로 공유</button>
     <button class="primary desk" id="btnPdfTop">PDF 저장</button>
     <button class="ghost" id="btnSaveTop">저장</button>
   </header>
@@ -300,7 +307,7 @@ table{border-collapse:collapse;width:100%}
           <button class="ghost" id="btnPick">앨범에서 선택</button>
           <button class="ghost" id="btnShot">카메라로 촬영</button>
         </div>
-        <p class="hint">사진 1장 = 블록 1개. 한 칸에 2~3장을 묶으려면 아래 카드에서 <b>↑합치기</b>를 누르세요. 한 페이지에 블록 2개가 들어갑니다.<br>사진은 <b>저장</b> 시 용량 절약을 위해 압축됩니다. 최상의 화질이 필요하면 사진을 추가한 세션에서 바로 PDF 저장을 진행하세요.</p>
+        <p class="hint">사진 1장 = 블록 1개. 한 칸에 2~4장을 묶으려면 아래 카드에서 <b>↑합치기</b>를 누르세요. 한 페이지에 블록 2개가 들어갑니다.<br>사진은 <b>저장</b> 시 용량 절약을 위해 압축됩니다. 최상의 화질이 필요하면 사진을 추가한 세션에서 바로 PDF 저장을 진행하세요.</p>
         <input type="file" id="file" accept="image/*" multiple hidden>
         <input type="file" id="cam" accept="image/*" capture="environment" hidden>
       </div>
@@ -358,6 +365,15 @@ table{border-collapse:collapse;width:100%}
       </div>
 
       <div class="group">
+        <h2>중간저장 · 불러오기</h2>
+        <div class="row" style="gap:8px">
+          <button class="ghost" id="btnWork">중간저장 (JSON)</button>
+          <button class="ghost" id="btnLoadEditor">불러오기</button>
+        </div>
+        <p class="hint">현재 보고서를 <b>사진까지 통째로</b> JSON 작업파일 하나로 내려받습니다. 인터넷이 안 되는 곳에서는 예전 오프라인 도구(본사점검 조치결과보고서_생성기)로 그대로 이어서 쓸 수 있고, 그 파일을 나중에 다시 여기로 불러와 서버에 저장할 수도 있습니다.</p>
+      </div>
+
+      <div class="group">
         <h2>기본값 · 초기화</h2>
         <div class="field"><button class="ghost" id="btnSaveM" style="width:100%">현장명·점검자 기억하기 (이 기기)</button></div>
         <div class="row" style="gap:8px">
@@ -377,6 +393,8 @@ table{border-collapse:collapse;width:100%}
     <button class="primary" id="fabPdf">PDF 저장</button>
   </div>
 </div>
+
+<input type="file" id="workFile" accept=".json,application/json" hidden>
 
 <div class="modal-overlay" id="appModal" hidden>
   <div class="modal-box">
@@ -920,7 +938,7 @@ function renderCards(){
         <div class="spacer"></div>
         <button class="mini" data-act="up" ${i===0?"disabled":""}>▲</button>
         <button class="mini" data-act="down" ${i===state.blocks.length-1?"disabled":""}>▼</button>
-        <button class="mini" data-act="merge" ${i===0||state.blocks[i-1].images.length>=3?"disabled":""}>↑합치기</button>
+        <button class="mini" data-act="merge" ${i===0||state.blocks[i-1].images.length>=4?"disabled":""}>↑합치기</button>
         <button class="mini" data-act="del">삭제</button>
       </div>
       <div class="thumbs">
@@ -965,7 +983,7 @@ $("cards").addEventListener("click", e=>{
   if(act==="down") state.blocks.splice(i+1,0,state.blocks.splice(i,1)[0]);
   if(act==="merge"){
     const cur = state.blocks.splice(i,1)[0];
-    state.blocks[i-1].images = state.blocks[i-1].images.concat(cur.images).slice(0,3);
+    state.blocks[i-1].images = state.blocks[i-1].images.concat(cur.images).slice(0,4);
   }
   if(act==="fit"){ state.blocks[i].fit = btn.dataset.v; }
   if(act==="imgleft" || act==="imgright"){
@@ -1058,10 +1076,10 @@ function coverPage(){
       </tr>
       <tr><th>점검자</th><td colspan="3">${esc(state.inspector)}</td></tr>
       <tr><th>점검종류</th><td colspan="3" class="kinds">${kinds}</td></tr>
-      <tr><th>점검사항</th><td colspan="3" class="${hasOpinion?"body-cell-sm":"body-cell"}"><div class="body-text">${esc(state.items)}</div></td></tr>
-      ${hasOpinion?`<tr><th>근로자<br>의견청취</th><td colspan="3" class="find-cell">${esc(state.opinion)}</td></tr>`:""}
-      <tr><th>지적 및<br>조치사항</th><td colspan="3" class="find-cell">${esc(state.findings)}</td></tr>
-      <tr><th>제출일자</th><td colspan="3">${fmt(state.d4)}</td></tr>
+      <tr class="row-items"><th>점검사항</th><td colspan="3" class="${hasOpinion?"body-cell-sm":"body-cell"}"><div class="body-text">${esc(state.items)}</div></td></tr>
+      ${hasOpinion?`<tr class="row-tail"><th>근로자<br>의견청취</th><td colspan="3" class="find-cell">${esc(state.opinion)}</td></tr>`:""}
+      <tr class="row-tail"><th>지적 및<br>조치사항</th><td colspan="3" class="find-cell">${esc(state.findings)}</td></tr>
+      <tr class="row-tail"><th>제출일자</th><td colspan="3">${fmt(state.d4)}</td></tr>
     </table>
   </section>`;
 }
@@ -1071,13 +1089,13 @@ function cell(text, limit){
   return `<span class="fit${t.length > limit ? " sm" : ""}">${esc(t)}</span>`;
 }
 function blockHTML(b, idx){
-  const n = Math.min(b.images.length,3) || 1;
+  const n = Math.min(b.images.length,4) || 1;
   const fit  = b.fit || "cover";
   const zoom = (Number(b.zoom) || 100) / 100;
   const posY = (b.posY === undefined || b.posY === null) ? 50 : Number(b.posY);
   const st = `object-fit:${fit};object-position:50% ${posY}%;transform:scale(${zoom});transform-origin:50% ${posY}%`;
   const imgs = b.images.length
-    ? b.images.slice(0,3).map(im=>`<div class="ic"><img src="${im.url}" alt="" style="${st}"></div>`).join("")
+    ? b.images.slice(0,4).map(im=>`<div class="ic"><img src="${im.url}" alt="" style="${st}"></div>`).join("")
     : `<div class="ph">사진 없음</div>`;
   return `<div class="block${idx===activeBlock?" hl":""}" data-b="${idx}">
     <div class="frame n${n}">${imgs}</div>
@@ -1109,24 +1127,58 @@ function photoPages(){
 
 function renderPaper(){
   $("paper").innerHTML = coverPage() + photoPages();
-  fitCover();
+  layoutCover();
   fitPaper();
 }
 
-function fitCover(){
-  const page = $("paper").querySelector(".page");
+/* 표지(1페이지 분량 서식) 배치.
+   - 내용이 A4 한 장 안에 들어오면: 기존처럼 "점검사항" 칸을 늘려 페이지 아래까지 꽉 채운다(서식 느낌 유지).
+   - 내용이 넘치면: 억지로 욱여넣지 않고, "근로자 의견청취/지적 및 조치사항/제출일자" 행을 통째로
+     다음 장으로 내려서 각 장이 원래의 위/아래 여백(padding)을 그대로 갖도록 한다. */
+function layoutCover(root){
+  const paper = root || $("paper");
+  // 이전에 나눠뒀던 표지 2페이지가 남아있다면 되돌린다(다시 계산하기 위해).
+  const stray = paper.querySelector(".page.cover-tail");
+  if(stray) stray.remove();
+
+  const page = paper.querySelector(".page");
   if(!page) return;
+  const table = page.querySelector("table.tbl");
   const cell = page.querySelector(".body-cell, .body-cell-sm");
-  if(!cell) return;
+  if(!table || !cell) return;
+
   const TARGET = Math.round(297 * 96 / 25.4);
   const keep = page.style.minHeight;
   page.style.minHeight = "0";
   cell.style.height = "0px";
   const contentH = cell.offsetHeight;
   const used = page.scrollHeight;
+
+  if(used <= TARGET){
+    // 한 장에 들어옴 → 기존처럼 점검사항 칸을 페이지 끝까지 채운다.
+    page.style.minHeight = keep;
+    const room = TARGET - used;
+    cell.style.height = Math.max(contentH, contentH + room) + "px";
+    return;
+  }
+
+  // 한 장을 넘음 → 점검사항 칸은 늘리지 않고(자연스러운 여백을 남기고),
+  // 의견청취/지적 및 조치사항/제출일자 행을 통째로 다음 장으로 옮긴다.
   page.style.minHeight = keep;
-  const room = TARGET - used;
-  cell.style.height = Math.max(contentH, contentH + room) + "px";
+  cell.style.height = "";
+
+  const tailRows = Array.from(table.querySelectorAll("tr.row-tail"));
+  if(!tailRows.length) return;
+
+  const tailTable = document.createElement("table");
+  tailTable.className = "tbl";
+  tailRows.forEach(tr => tailTable.appendChild(tr));
+
+  const tailPage = document.createElement("section");
+  tailPage.className = "page cover-tail";
+  tailPage.appendChild(tailTable);
+
+  page.after(tailPage);
 }
 
 function fitPaper(){
@@ -1142,9 +1194,9 @@ function fitPaper(){
 }
 
 let rt;
-window.addEventListener("resize", ()=>{ clearTimeout(rt); rt = setTimeout(()=>{ fitCover(); fitPaper(); },120); });
+window.addEventListener("resize", ()=>{ clearTimeout(rt); rt = setTimeout(()=>{ layoutCover(); fitPaper(); },120); });
 window.addEventListener("orientationchange", ()=> setTimeout(fitPaper,300));
-window.addEventListener("beforeprint", ()=>{ $("paper").style.transform=""; $("paperWrap").style.height=""; fitCover(); });
+window.addEventListener("beforeprint", ()=>{ $("paper").style.transform=""; $("paperWrap").style.height=""; layoutCover(); });
 window.addEventListener("afterprint", fitPaper);
 
 /* =====================================================================
@@ -1222,7 +1274,7 @@ async function exportPDF(){
   paper.style.transform = "";
   wrap.style.height = "";
   paper.innerHTML = coverPage() + photoPages();
-  fitCover();
+  layoutCover();
 
   try{
     const pages = Array.from(paper.querySelectorAll(".page"));
@@ -1233,32 +1285,75 @@ async function exportPDF(){
        근본적인 한계가 있다. 그래서 캡처 시에는 테두리를 투명하게 감춘 "글자·사진만" 이미지를 찍고,
        실제 테두리 선은 측정한 좌표에 맞춰 PDF에 벡터 선으로 따로 그려 화면과 같은 얇기로 맞춘다. */
     paper.classList.add("pdf-capturing");
+    let pdfPageCount = 0;
+    const A4_RATIO = 297 / 210;
+    const OVERFLOW_TOLERANCE_MM = 3; // 이 정도의 초과는 굳이 새 장으로 나누지 않고 한 장에 담는다
     for(let i=0;i<pages.length;i++){
       const pageEl = pages[i];
       const pageRect = pageEl.getBoundingClientRect();
       const mmPerPx = 210 / pageRect.width;
+      const onePagePx = pageRect.width * A4_RATIO; // 이 페이지 요소 기준, A4 한 장 분량의 높이(px)
+      const totalPx = pageRect.height;
       const cellRects = Array.from(pageEl.querySelectorAll(".tbl td, .tbl th, .approval td, .block td"))
         .map(el => el.getBoundingClientRect());
       const frameRects = Array.from(pageEl.querySelectorAll(".block .frame"))
         .map(el => el.getBoundingClientRect());
 
-      const canvas = await html2canvas(pageEl, { scale:2, useCORS:true, backgroundColor:"#ffffff" });
-      const imgData = canvas.toDataURL("image/jpeg", 0.92);
-      if(i>0) pdf.addPage();
-      pdf.addImage(imgData, "JPEG", 0, 0, 210, 297);
+      // 내용이 A4 한 장보다 많이 길면(예: 점검사항이 긴 경우) 이미지를 억지로 눌러 담지 않고,
+      // 실제 길이만큼 여러 장으로 나눠서 담는다 — 그래야 사진/글자와 벡터 테두리 선의 위치가 어긋나지 않는다.
+      const overflowPx = totalPx - onePagePx;
+      const needsSplit = overflowPx > (OVERFLOW_TOLERANCE_MM / mmPerPx);
+      const sliceCount = needsSplit ? Math.max(1, Math.ceil(totalPx / onePagePx)) : 1;
 
-      pdf.setDrawColor(0,0,0);
-      pdf.setLineWidth(0.22);
-      cellRects.forEach(r=>{
-        pdf.rect((r.left-pageRect.left)*mmPerPx, (r.top-pageRect.top)*mmPerPx, r.width*mmPerPx, r.height*mmPerPx);
-      });
-      frameRects.forEach(r=>{
-        const x = (r.left-pageRect.left)*mmPerPx, y = (r.top-pageRect.top)*mmPerPx;
-        const w = r.width*mmPerPx, h = r.height*mmPerPx;
-        pdf.line(x, y, x+w, y);       // 위쪽
-        pdf.line(x, y, x, y+h);       // 왼쪽
-        pdf.line(x+w, y, x+w, y+h);   // 오른쪽 (아래쪽은 화면과 동일하게 비워둔다)
-      });
+      const canvas = await html2canvas(pageEl, { scale:2, useCORS:true, backgroundColor:"#ffffff" });
+      const canvasScaleX = canvas.width / pageRect.width;
+      const canvasScaleY = canvas.height / pageRect.height;
+
+      for(let s=0; s<sliceCount; s++){
+        const sliceTopPx = s * onePagePx;
+        const sliceHeightPx = sliceCount === 1 ? totalPx : Math.min(onePagePx, totalPx - sliceTopPx);
+        if(sliceHeightPx <= 0) break;
+
+        let imgData, imgHeightMm;
+        if(sliceCount === 1){
+          imgData = canvas.toDataURL("image/jpeg", 0.92);
+          imgHeightMm = 297; // 기존과 동일: 거의 정확히 한 장 분량이므로 그대로 297mm에 맞춘다
+        }else{
+          const sc = document.createElement("canvas");
+          sc.width = canvas.width;
+          sc.height = Math.max(1, Math.round(sliceHeightPx * canvasScaleY));
+          const sctx = sc.getContext("2d");
+          sctx.fillStyle = "#ffffff";
+          sctx.fillRect(0, 0, sc.width, sc.height);
+          sctx.drawImage(canvas, 0, sliceTopPx*canvasScaleY, canvas.width, sliceHeightPx*canvasScaleY, 0, 0, sc.width, sc.height);
+          imgData = sc.toDataURL("image/jpeg", 0.92);
+          imgHeightMm = sliceHeightPx * mmPerPx; // 실제 비율 그대로 — 눌리거나 늘어나지 않는다
+        }
+
+        if(pdfPageCount>0) pdf.addPage();
+        pdfPageCount++;
+        pdf.addImage(imgData, "JPEG", 0, 0, 210, imgHeightMm);
+
+        pdf.setDrawColor(0,0,0);
+        pdf.setLineWidth(0.22);
+        const inSlice = r => (r.bottom - pageRect.top) > sliceTopPx && (r.top - pageRect.top) < sliceTopPx + sliceHeightPx;
+        const toSliceXY = r => ({
+          x: (r.left - pageRect.left) * mmPerPx,
+          y: (r.top - pageRect.top - sliceTopPx) * mmPerPx,
+          w: r.width * mmPerPx,
+          h: r.height * mmPerPx
+        });
+        cellRects.filter(inSlice).forEach(r=>{
+          const g = toSliceXY(r);
+          pdf.rect(g.x, g.y, g.w, g.h);
+        });
+        frameRects.filter(inSlice).forEach(r=>{
+          const g = toSliceXY(r);
+          pdf.line(g.x, g.y, g.x+g.w, g.y);       // 위쪽
+          pdf.line(g.x, g.y, g.x, g.y+g.h);       // 왼쪽
+          pdf.line(g.x+g.w, g.y, g.x+g.w, g.y+g.h); // 오른쪽 (아래쪽은 화면과 동일하게 비워둔다)
+        });
+      }
     }
     paper.classList.remove("pdf-capturing");
     const blob = pdf.output("blob");
@@ -1341,6 +1436,144 @@ async function exportExcel(){
 $("btnXlsTop").addEventListener("click", exportExcel);
 
 /* =====================================================================
+   12b. HTML로 내보내기 (사진이 포함된 독립 실행형 파일 — 다른 사람과 공유용)
+   ===================================================================== */
+async function exportHTML(){
+  if(!downloadsCap){ await showAlert("이 환경에서는 파일 다운로드를 사용할 수 없습니다."); return; }
+  const btn = $("btnHtmlTop");
+  const origLabel = btn ? btn.textContent : null;
+  if(btn){ btn.disabled = true; btn.textContent = "만드는 중..."; }
+
+  // 화면에는 보이지 않는 임시 영역에서 표지·사진 페이지를 조립한다.
+  // (실제 미리보기와 똑같이 내용이 넘치면 표지를 두 장으로 나누는 로직까지 그대로 적용된다.)
+  const temp = document.createElement("div");
+  temp.style.cssText = "position:fixed;left:-99999px;top:0;visibility:hidden;";
+  document.body.appendChild(temp);
+  try{
+    temp.innerHTML = coverPage() + photoPages();
+    layoutCover(temp);
+    const bodyHTML = temp.innerHTML;
+
+    // 아티팩트로 게시되면 플랫폼이 자체 기본 <style>을 먼저 끼워 넣고 이 앱의 <style>이 그 다음에
+    // 오기 때문에, 첫 번째 <style>만 가져오면(예전 코드) 정작 표/사진 서식은 빠지고 플랫폼의
+    // 최소 기본 스타일만 담겨 "선도 서식도 없이 글자만 뭉쳐 보이는" 파일이 만들어졌다.
+    // 문서에 있는 <style> 전부를 순서대로 합쳐야 실제 서식이 빠짐없이 포함된다.
+    const css = Array.from(document.querySelectorAll("style")).map(s => s.textContent).join("\n");
+    const title = esc(state.site || "본사점검 조치결과보고서");
+
+    const doc = `<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>
+${css}
+body{background:#e5e5e5;padding:20px 0}
+</style>
+</head>
+<body>
+<div id="paper">${bodyHTML}</div>
+</body>
+</html>`;
+
+    const blob = new Blob([doc], {type:"text/html"});
+    const tag = (state.site||"현장").replace(/[\\/:*?"<>|]/g,"").slice(0,20);
+    const day = (state.d1||"").replace(/-/g,"") || "작업중";
+    await downloadsCap.save({ filename:`본사점검_${tag}_${day}.html`, data: blob });
+  }catch(err){
+    if(!(err && err.code === "declined")){
+      console.error(err);
+      await showAlert("HTML 파일을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    }
+  }finally{
+    temp.remove();
+    if(btn){ btn.disabled = false; btn.textContent = origLabel; }
+  }
+}
+$("btnHtmlTop").addEventListener("click", exportHTML);
+
+/* =====================================================================
+   12c. 중간저장(JSON) · 불러오기
+   — HTML/PDF와 달리 "다시 편집 가능한" 작업파일. 예전 오프라인 생성기의
+     작업파일과 같은 형식으로 만들어, 서로 불러오기가 되도록 맞췄다.
+   ===================================================================== */
+function exportWorkJSON(){
+  const payload = {
+    format: "본사점검 조치결과보고서",
+    version: 1,
+    savedAt: new Date().toISOString(),
+    state: {
+      site: state.site, d1: state.d1, d2: state.d2, d3: state.d3, d4: state.d4,
+      inspector: state.inspector, kind: state.kind, etc: state.etc,
+      items: state.items, opinion: state.opinion, findings: state.findings,
+      blocks: state.blocks.map(b => ({
+        images: b.images.map(im => im.url),
+        kind: b.kind || "", date: b.date || "", content: b.content || "", place: b.place || "",
+        fit: b.fit || "cover",
+        zoom: Number(b.zoom) || 100,
+        posY: (b.posY===undefined || b.posY===null) ? 50 : Number(b.posY)
+      }))
+    }
+  };
+  return payload;
+}
+async function saveWork(){
+  if(!downloadsCap){ await showAlert("이 환경에서는 파일 다운로드를 사용할 수 없습니다."); return; }
+  try{
+    const payload = exportWorkJSON();
+    const tag = (state.site||"현장").replace(/[\\/:*?"<>|]/g,"").slice(0,20);
+    const day = (state.d1||"").replace(/-/g,"") || "작업중";
+    const blob = new Blob([JSON.stringify(payload)], {type:"application/json"});
+    await downloadsCap.save({ filename:`본사점검_${tag}_${day}.json`, data: blob });
+  }catch(err){
+    if(err && err.code === "declined") return;
+    console.error(err);
+    await showAlert("작업파일을 만들지 못했습니다.");
+  }
+}
+async function importWorkFile(file){
+  let text;
+  try{ text = await file.text(); }
+  catch(e){ await showAlert("파일을 읽지 못했습니다."); return; }
+  let p;
+  try{ p = JSON.parse(text); }
+  catch(e){ await showAlert("이 파일은 JSON 형식이 아닙니다."); return; }
+  const st = p && p.state;
+  if(!st || !Array.isArray(st.blocks)){ await showAlert("이 파일은 본사점검 조치결과보고서 작업파일이 아닙니다."); return; }
+  if(dirty && !(await showConfirm("저장하지 않은 변경사항이 있습니다. 불러오면 지금 내용은 사라집니다. 계속할까요?"))) return;
+
+  state.reportId = null;   // 불러온 내용은 새 보고서로 취급한다 (기존 저장본을 덮어쓰지 않음)
+  state.createdAt = null;
+  deletedImageIds = [];
+  ["site","d1","d2","d3","d4","inspector","etc","items","opinion","findings"].forEach(k=>{ state[k] = st[k] ?? ""; });
+  state.kind = ["정기점검","수시점검","기타점검"].includes(st.kind) ? st.kind : "수시점검";
+  state.blocks = st.blocks.map(b => ({
+    id: ++seq,
+    images: (Array.isArray(b.images) ? b.images : []).filter(x => typeof x === "string").map(url => ({id:null, url, pending:true})),
+    kind: b.kind || "", date: b.date || "", content: b.content || "", place: b.place || "",
+    fit: b.fit === "contain" ? "contain" : "cover",
+    zoom: Number(b.zoom) || 100,
+    posY: (b.posY===undefined || b.posY===null) ? 50 : Number(b.posY)
+  }));
+
+  showScreen("editor");
+  $("editorTitle").textContent = state.site || "보고서";
+  populateFormInputs();
+  renderCards(); renderPaper(); syncTabLabel();
+  updateSaveStatus(db ? "아직 저장되지 않음" : "");
+  if(db) markDirty();
+  await showAlert(`불러왔습니다. 사진 ${state.blocks.length}칸.${db ? " '저장'을 눌러야 서버에 남습니다." : ""}`);
+}
+$("btnWork").addEventListener("click", saveWork);
+$("btnLoadEditor").addEventListener("click", ()=> $("workFile").click());
+$("btnImportList").addEventListener("click", ()=> $("workFile").click());
+$("workFile").addEventListener("change", e=>{
+  if(e.target.files[0]) importWorkFile(e.target.files[0]);
+  e.target.value = "";
+});
+
+/* =====================================================================
    13. 시작
    ===================================================================== */
 (async function init(){
@@ -1352,6 +1585,11 @@ $("btnXlsTop").addEventListener("click", exportExcel);
   db = initFirebaseDb();
   downloadsCap = { save: browserSave };
   subscribeList();
+  if(!downloadsCap){
+    $("btnXlsTop").title = "이 환경에서는 파일 다운로드를 사용할 수 없습니다";
+    $("btnHtmlTop").title = "이 환경에서는 파일 다운로드를 사용할 수 없습니다";
+    $("btnPdfTop").title = "이 환경에서는 파일 다운로드를 사용할 수 없어, 누르면 브라우저 인쇄 대화상자가 대신 열립니다";
+  }
 })();
 </script>
 
