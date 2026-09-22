@@ -16,9 +16,9 @@
   // 권한 등급: null(접근 불가) < read(조회) < write(작성·수정) < delete(삭제 포함)
   var PERMS = {
     admin:   { hq:"delete", dr:"delete", ra:"delete" },
-    hq:      { hq:"write",  dr:"write",  ra:"write"  },
-    field:   { hq:"read",   dr:null,     ra:"write"  },
-    reader:  { hq:"read",   dr:"read",   ra:"read"   },
+    hq:      { hq:"write",  dr:"write",  ra:null     },
+    field:   { hq:"read",   dr:null,     ra:null     },
+    reader:  { hq:"read",   dr:"read",   ra:null     },
     pending: { hq:null,     dr:null,     ra:null     }
   };
   var RANK = { read:1, write:2, delete:3 };
