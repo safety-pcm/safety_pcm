@@ -344,7 +344,8 @@ function selectItem(i){
   const loading = document.getElementById("loading");
   loading.classList.remove("hide");
   const frame = document.getElementById("frame");
-  frame.src = item.url;
+  // 캐시 방지: 도구 파일을 고쳐 올리면 허브 화면에도 바로 새 버전이 뜨도록 매번 최신본을 불러옴
+  frame.src = item.url + (item.url.indexOf("?") < 0 ? "?" : "&") + "v=" + Date.now();
   renderNav();
 }
 
