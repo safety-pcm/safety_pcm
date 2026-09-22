@@ -1526,10 +1526,73 @@ function buildSummaryChunk(period, siteId){
   return el;
 }
 
+const PRINT_FONT = 'font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif; color:#16212B;';
+
+/* 1페이지: 항목별 배점 및 점수표 (원본 서식 「을지」와 같은 구성) */
+function buildScoreTableChunk(period, siteId){
+  const { sections, overall } = computeRecord(siteId);
+  const th = 'padding:6px 8px;border:1px solid #C9D2D8;background:#EEF2F4;font-weight:700;font-size:11.5px;';
+  const td = 'padding:6px 8px;border:1px solid #C9D2D8;font-size:11.5px;';
+  const rows = sections.map(x=>{
+    const b = band(x.pct);
+    const col = b==='good' ? '#1F8A5B' : b==='mid' ? '#B7791F' : b==='low' ? '#C0392B' : '#9AA5AD';
+    return `<tr>
+      <td style="${td}">${x.num}. ${escapeHtml(x.title)}</td>
+      <td style="${td}text-align:center;">${x.weight}</td>
+      <td style="${td}text-align:center;">${x.score}</td>
+      <td style="${td}text-align:center;font-weight:700;color:${col};">${fmtPct(x.pct)}</td>
+      <td style="${td}text-align:center;color:#7C8A99;">${x.answered}/${x.total}</td>
+    </tr>`;
+  }).join('');
+  const el = document.createElement('div');
+  el.style.cssText = PRINT_FONT + 'padding:6px 6px 10px;';
+  el.innerHTML = `
+    <div style="font-size:14px;font-weight:700;border-bottom:2px solid #16212B;padding-bottom:6px;margin-bottom:8px;">항목별 배점 및 점수표</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="${th}text-align:left;">구분</th>
+        <th style="${th}width:52px;">배점</th>
+        <th style="${th}width:52px;">점수</th>
+        <th style="${th}width:74px;">환산점수</th>
+        <th style="${th}width:62px;">응답</th>
+      </tr></thead>
+      <tbody>${rows}
+        <tr>
+          <td style="${td}font-weight:700;background:#F5F8F9;">합 계</td>
+          <td style="${td}text-align:center;font-weight:700;background:#F5F8F9;">${overall.weight}</td>
+          <td style="${td}text-align:center;font-weight:700;background:#F5F8F9;">${overall.score}</td>
+          <td style="${td}text-align:center;font-weight:700;background:#F5F8F9;">${fmtPct(overall.pct)}</td>
+          <td style="${td}text-align:center;font-weight:700;background:#F5F8F9;">${overall.answered}/${TOTAL_ITEMS}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="font-size:10px;color:#7C8A99;margin-top:6px;">배점·점수는 "해당없음" 문항을 제외하고 산정 · 환산점수 = 점수 ÷ 배점 × 100</div>`;
+  return el;
+}
+
+/* 항목 제목 (첫 문항과 한 덩어리로 묶어 제목만 페이지 끝에 남지 않게 함) */
+function sectionTitleHtml(siteId, sec){
+  const s = computeRecord(siteId).sections.find(x=>x.num===sec.num);
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #16212B;padding-bottom:6px;margin:8px 0 2px;">
+      <div style="font-size:14px;font-weight:700;">${sec.num}. ${escapeHtml(sec.title)} <span style="font-size:10.5px;font-weight:400;color:#7C8A99;">${escapeHtml(sec.ref||'')}</span></div>
+      <div style="font-size:12px;font-weight:600;color:#4B5A68;white-space:nowrap;">${s.score}/${s.weight}점 · ${fmtPct(s.pct)}</div>
+    </div>`;
+}
+
 function buildPrintChunks(period, siteId){
-  const chunks = [ buildHeaderChunk(period, siteId), ...SECTIONS.map(sec => buildSectionChunk(period, siteId, sec)) ];
+  const d = recordData[recKey(period,siteId)] || {};
+  const chunks = [ buildHeaderChunk(period, siteId), buildScoreTableChunk(period, siteId) ];
   const summaryChunk = buildSummaryChunk(period, siteId);
   if(summaryChunk) chunks.push(summaryChunk);
+  chunks[chunks.length-1].dataset.pageBreakAfter = '1';   // 1페이지(요약) 다음부터 세부 점검내용
+  SECTIONS.forEach(sec=>{
+    sec.items.forEach((it, idx)=>{
+      const el = document.createElement('div');
+      el.style.cssText = PRINT_FONT + 'padding:0 6px;';
+      el.innerHTML = (idx===0 ? sectionTitleHtml(siteId, sec) : '') + printItemRowHtml(period, siteId, it, d[it.id] || {});
+      chunks.push(el);
+    });
+  });
   return chunks;
 }
 
@@ -1611,7 +1674,7 @@ async function confirmPdfSave(){
       } else {
         if(cursorY + imgH > pageH - margin){ pdf.addPage(); cursorY = margin; }
         pdf.addImage(canvas.toDataURL('image/jpeg',0.92), 'JPEG', margin, cursorY, imgW, imgH);
-        cursorY += imgH + 3;
+        cursorY += imgH + 1;
       }
     }
 
@@ -1620,8 +1683,14 @@ async function confirmPdfSave(){
       saveBtn.textContent = `PDF 생성 중… (${i+1}/${chunks.length})`;
       host.innerHTML = '';
       host.appendChild(chunks[i]);
-      const canvas = await window.html2canvas(chunks[i], { scale:1.5, backgroundColor:'#ffffff', useCORS:true });
+      const canvas = await window.html2canvas(chunks[i], { scale:2, backgroundColor:'#ffffff', useCORS:true });
       placeCanvas(canvas);
+      if(chunks[i].dataset && chunks[i].dataset.pageBreakAfter && i < chunks.length-1){ pdf.addPage(); cursorY = margin; }
+    }
+    const nPages = pdf.getNumberOfPages();
+    for(let pg=1; pg<=nPages; pg++){
+      pdf.setPage(pg); pdf.setFontSize(8); pdf.setTextColor(150);
+      pdf.text(`- ${pg} / ${nPages} -`, pageW/2, pageH-5, { align:'center' });
     }
 
     const blob = pdf.output('blob');
