@@ -3,7 +3,7 @@
    -----------------------------------------------------------------------------
    · 등급: 관리자(admin) / 본사담당자(hq) / 현장담당자(field) / 열람자(reader)
      (가입 직후에는 '승인 대기(pending)' 상태이며 관리자가 등급을 지정해야 사용 가능)
-   · 도구 키: hq = 본사점검 보고서 관리, dr = 중대재해 이행점검 서류심사
+   · 도구 키: hq = 본사점검 보고서 관리, dr = 중대재해 이행점검 서류심사, ra = 위험성평가 관리
    · 권한 표를 바꾸려면 아래 PERMS 만 수정하면 화면 쪽이 모두 따라갑니다.
      (단, 실제 데이터 보호는 Firebase Firestore 규칙이 담당하므로 규칙도 같이 맞춰야 합니다.)
    ============================================================================= */
@@ -15,11 +15,11 @@
 
   // 권한 등급: null(접근 불가) < read(조회) < write(작성·수정) < delete(삭제 포함)
   var PERMS = {
-    admin:   { hq:"delete", dr:"delete" },
-    hq:      { hq:"write",  dr:"write"  },
-    field:   { hq:"read",   dr:null     },
-    reader:  { hq:"read",   dr:"read"   },
-    pending: { hq:null,     dr:null     }
+    admin:   { hq:"delete", dr:"delete", ra:"delete" },
+    hq:      { hq:"write",  dr:"write",  ra:"write"  },
+    field:   { hq:"read",   dr:null,     ra:"write"  },
+    reader:  { hq:"read",   dr:"read",   ra:"read"   },
+    pending: { hq:null,     dr:null,     ra:null     }
   };
   var RANK = { read:1, write:2, delete:3 };
 
