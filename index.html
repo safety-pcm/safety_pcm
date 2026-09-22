@@ -159,6 +159,58 @@ button{ font-family:inherit; }
   .tb-tag{ display:none; }
 }
 @media (prefers-reduced-motion:reduce){ .loading .spin{ animation:none } }
+
+/* ---------- login / gate ---------- */
+.gate{ position:fixed; inset:0; z-index:100; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+.gate[hidden]{ display:none; }
+.gate-card{ width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:26px 24px 22px; margin:auto; }
+.gate-card h2{ font-family:'Noto Serif KR',serif; font-size:19px; margin:0 0 4px; }
+.gate-card .sub{ font-size:12px; color:var(--ink-faint); margin-bottom:16px; word-break:break-all; }
+.g-tabs{ display:flex; gap:4px; background:var(--surface-3); padding:3px; border-radius:9px; margin-bottom:14px; }
+.g-tab{ flex:1; border:0; background:none; padding:8px; border-radius:7px; font-size:13px; font-weight:600; color:var(--ink-soft); cursor:pointer; }
+.g-tab.on{ background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.12); }
+.g-field{ display:block; margin-bottom:10px; }
+.g-field span{ display:block; font-size:11.5px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; }
+.g-field input{ width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; font-size:14px; }
+.g-field input:focus{ outline:2px solid var(--accent); outline-offset:-1px; }
+.g-btn{ width:100%; padding:11px; border-radius:9px; border:1px solid var(--accent); background:var(--accent); color:var(--accent-ink); font-size:14px; font-weight:700; cursor:pointer; }
+.g-btn.ghost{ background:var(--surface); color:var(--ink); border-color:var(--line); }
+.g-btn:disabled{ opacity:.6; cursor:default; }
+.g-btn + .g-btn{ margin-top:8px; }
+.g-or{ text-align:center; font-size:11px; color:var(--ink-faint); margin:12px 0; }
+.g-err{ min-height:18px; font-size:12px; color:#c0392b; margin:2px 0 8px; line-height:1.5; }
+.g-msg{ font-size:13px; line-height:1.7; color:var(--ink-soft); margin:8px 0 16px; }
+.g-link{ background:none; border:0; color:var(--accent); font-size:12px; cursor:pointer; padding:4px 0; text-decoration:underline; }
+
+/* ---------- user bar / admin modal ---------- */
+.tb-user{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-soft); white-space:nowrap; }
+.tb-user[hidden]{ display:none; }
+.tb-user b{ color:var(--ink); font-weight:700; }
+.role-badge{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent); }
+.tb-btn{ font-size:12px; font-weight:600; color:var(--ink-soft); background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; white-space:nowrap; }
+.tb-btn:hover{ color:var(--accent); border-color:var(--accent); }
+.tb-btn[hidden]{ display:none; }
+.dot{ display:inline-block; min-width:16px; padding:0 5px; margin-left:5px; border-radius:999px; background:#c0392b; color:#fff; font-size:10.5px; line-height:16px; text-align:center; }
+.dot[hidden]{ display:none; }
+.modal-back{ position:fixed; inset:0; background:rgba(10,15,20,.5); z-index:90; display:flex; align-items:center; justify-content:center; padding:16px; }
+.modal-back[hidden]{ display:none; }
+.modal{ width:100%; max-width:720px; max-height:88vh; overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); }
+.modal-head{ display:flex; align-items:center; gap:10px; padding:14px 20px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); z-index:1; }
+.modal-head h3{ margin:0; font-size:15px; flex:1; }
+.modal-note{ padding:12px 20px 16px; font-size:11.5px; color:var(--ink-faint); line-height:1.7; }
+.u-row{ display:grid; grid-template-columns:1fr 140px 64px; gap:10px; align-items:center; padding:12px 20px; border-bottom:1px solid var(--line-soft); }
+.u-row.pend{ background:var(--warn-soft); }
+.u-name{ font-size:13.5px; font-weight:700; }
+.u-mail{ font-size:11.5px; color:var(--ink-faint); word-break:break-all; }
+.u-row select{ padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font:inherit; font-size:12.5px; width:100%; }
+.u-del{ font-size:11.5px; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink-soft); cursor:pointer; }
+.u-del.armed{ border-color:#c0392b; color:#c0392b; }
+.u-del:disabled{ visibility:hidden; }
+@media (max-width:760px){
+  .u-row{ grid-template-columns:1fr 1fr; }
+  .u-del{ grid-column:1 / -1; }
+  .tb-user .who{ display:none; }
+}
 </style>
 </head>
 <body>
@@ -177,6 +229,9 @@ button{ font-family:inherit; }
       <span class="tb-title" id="tbTitle"></span>
       <span class="tb-tag" id="tbTag"></span>
       <span class="tb-spacer"></span>
+      <span class="tb-user" id="tbUser" hidden><span class="who"><b id="uName"></b></span><span class="role-badge" id="uRole"></span></span>
+      <button class="tb-btn" id="btnUsers" type="button" hidden>사용자 관리<span class="dot" id="pendDot" hidden></span></button>
+      <button class="tb-btn" id="btnLogout" type="button" hidden>로그아웃</button>
       <a class="tb-open" id="tbOpen" target="_blank" rel="noopener">새 탭에서 열기 ↗</a>
     </div>
     <div class="setup-banner" id="setupBanner"><span>⚠️</span><span><b>Firebase 설정이 아직 비어 있습니다.</b> 지금은 저장 없이 미리보기만 가능합니다. <code>firebase-config.js</code> 파일에 본인의 Firebase 프로젝트 설정값을 채워 넣으면 보고서·점검 점수가 실제로 저장되고 기기 간에 동기화됩니다. (배포 가이드 문서 참고)</span></div>
@@ -187,7 +242,26 @@ button{ font-family:inherit; }
   </main>
 </div>
 
+
+<div class="gate" id="gate" hidden><div class="gate-card" id="gateBody"></div></div>
+
+<div class="modal-back" id="usersModal" hidden>
+  <div class="modal" role="dialog" aria-label="사용자 관리">
+    <div class="modal-head"><h3>사용자 관리</h3><button class="tb-btn" id="usersClose" type="button">닫기</button></div>
+    <div id="uList"></div>
+    <div class="modal-note">
+      · 가입 신청자는 상단에 노란색으로 표시됩니다. 등급을 지정하면 바로 승인됩니다.<br>
+      · 등급을 '승인 대기'로 바꾸면 접근이 막힙니다. 삭제한 사용자가 다시 로그인하면 승인 대기 상태로 다시 나타납니다.<br>
+      · 관리자 본인 계정의 등급은 바꿀 수 없습니다.
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
+<script src="auth.js"></script>
 <script>
 /* ==========================================================================
    등록된 도구 목록
@@ -199,6 +273,7 @@ const LINKS = [
   {
     title: "본사점검 보고서 관리",
     tag: "보고서 · 현장점검",
+    key: "hq",
     url: "tools/hq-report.html",
     emoji: "🦺",
     accent: "teal"
@@ -206,6 +281,7 @@ const LINKS = [
   {
     title: "중대재해 이행점검 서류심사",
     tag: "서류심사 · 이행점검",
+    key: "dr",
     url: "tools/disaster-review.html",
     emoji: "🦺",
     accent: "amber"
@@ -221,10 +297,11 @@ const ACCENTS = {
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 let current = 0;
+let VIS = LINKS.slice();   // 로그인한 사용자의 등급으로 볼 수 있는 도구만 담김
 
 function renderNav(){
   const nav = document.getElementById("nav");
-  nav.innerHTML = LINKS.map((item,i)=>{
+  nav.innerHTML = VIS.map((item,i)=>{
     const a = ACCENTS[item.accent] || ACCENTS.teal;
     return `<button class="nav-item${i===current?' active':''}" data-i="${i}" style="--item-accent:${a.c};--item-accent-soft:${a.s}">
       <span class="nav-icon">${item.emoji}</span>
@@ -243,12 +320,12 @@ function renderNav(){
   nav.querySelectorAll(".nav-item").forEach(btn=>{
     btn.addEventListener("click", ()=> selectItem(Number(btn.dataset.i)));
   });
-  document.getElementById("count").textContent = LINKS.length;
+  document.getElementById("count").textContent = VIS.length;
 }
 
 function selectItem(i){
   current = i;
-  const item = LINKS[i];
+  const item = VIS[i];
   const a = ACCENTS[item.accent] || ACCENTS.teal;
   document.getElementById("tbTitle").textContent = item.title;
   const tag = document.getElementById("tbTag");
@@ -267,12 +344,231 @@ document.getElementById("frame").addEventListener("load", ()=>{
   document.getElementById("loading").classList.add("hide");
 });
 
-if(!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.apiKey || window.FIREBASE_CONFIG.apiKey.indexOf("여기에") === 0){
-  document.getElementById("setupBanner").classList.add("show");
+/* ==========================================================================
+   로그인 · 권한
+   ========================================================================== */
+const SA = window.SafetyAuth;
+const $ = id => document.getElementById(id);
+const gate = $("gate"), gateBody = $("gateBody");
+let shellStarted = false, lastRole = null, profile = null;
+let unsubProfile = null, unsubUsers = null, usersCache = [];
+
+const AUTH_ERR = {
+  "auth/invalid-email": "이메일 형식이 올바르지 않습니다.",
+  "auth/user-not-found": "이메일 또는 비밀번호가 올바르지 않습니다.",
+  "auth/wrong-password": "이메일 또는 비밀번호가 올바르지 않습니다.",
+  "auth/invalid-credential": "이메일 또는 비밀번호가 올바르지 않습니다.",
+  "auth/email-already-in-use": "이미 가입된 이메일입니다. 로그인해 주세요.",
+  "auth/weak-password": "비밀번호는 6자 이상이어야 합니다.",
+  "auth/too-many-requests": "시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+  "auth/network-request-failed": "네트워크 연결을 확인해 주세요.",
+  "auth/popup-blocked": "팝업이 차단되었습니다. 브라우저의 팝업 허용 후 다시 시도해 주세요.",
+  "auth/unauthorized-domain": "이 사이트 주소가 Firebase 로그인 허용 도메인에 등록되어 있지 않습니다. 관리자에게 문의해 주세요.",
+  "auth/operation-not-allowed": "이 로그인 방식이 아직 켜져 있지 않습니다. 관리자에게 문의해 주세요."
+};
+function errMsg(e){
+  const c = e && e.code;
+  if(c === "auth/popup-closed-by-user" || c === "auth/cancelled-popup-request") return "";
+  return AUTH_ERR[c] || ("문제가 발생했습니다." + (c ? " (" + c + ")" : ""));
+}
+function fmtDate(iso){
+  const d = new Date(iso); if(!iso || isNaN(d)) return "";
+  return d.getFullYear() + "." + String(d.getMonth()+1).padStart(2,"0") + "." + String(d.getDate()).padStart(2,"0");
+}
+function showGateMsg(title, msg){
+  gate.hidden = false;
+  gateBody.innerHTML = `<h2>${esc(title)}</h2><div class="g-msg">${esc(msg)}</div>`;
 }
 
-renderNav();
-selectItem(0);
+function renderLogin(mode){
+  mode = mode || "in";
+  const up = mode === "up";
+  gate.hidden = false;
+  gateBody.innerHTML = `
+    <h2>안전관리 툴박스</h2>
+    <div class="sub">대라수건설(주) 안전보건경영실 · 로그인 후 이용할 수 있습니다</div>
+    <div class="g-tabs">
+      <button type="button" class="g-tab${up?'':' on'}" data-m="in">로그인</button>
+      <button type="button" class="g-tab${up?' on':''}" data-m="up">가입</button>
+    </div>
+    <form id="gForm" novalidate>
+      ${up ? `<label class="g-field"><span>이름 (직급 포함)</span><input id="gName" autocomplete="name" placeholder="예: 홍길동 과장"></label>` : ""}
+      <label class="g-field"><span>이메일</span><input id="gEmail" type="email" autocomplete="email" inputmode="email"></label>
+      <label class="g-field"><span>비밀번호</span><input id="gPw" type="password" autocomplete="${up?'new-password':'current-password'}" placeholder="${up?'6자 이상':''}"></label>
+      <div class="g-err" id="gErr"></div>
+      <button class="g-btn" id="gSubmit" type="submit">${up?'가입 신청':'로그인'}</button>
+    </form>
+    <div class="g-or">또는</div>
+    <button class="g-btn ghost" id="gGoogle" type="button">Google 계정으로 계속하기</button>
+    ${up
+      ? `<div class="g-msg" style="margin:12px 0 0;font-size:11.5px">가입 후 관리자가 승인하고 등급을 지정하면 이용할 수 있습니다.</div>`
+      : `<div style="text-align:center;margin-top:10px"><button class="g-link" id="gReset" type="button">비밀번호를 잊으셨나요?</button></div>`}
+  `;
+  gateBody.querySelectorAll(".g-tab").forEach(b => b.addEventListener("click", () => renderLogin(b.dataset.m)));
+
+  $("gForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const email = $("gEmail").value.trim(), pw = $("gPw").value;
+    const name = up ? $("gName").value.trim() : "";
+    const err = $("gErr"), btn = $("gSubmit");
+    err.textContent = "";
+    if(!email || !pw){ err.textContent = "이메일과 비밀번호를 입력해 주세요."; return; }
+    if(up && !name){ err.textContent = "이름을 입력해 주세요."; return; }
+    btn.disabled = true;
+    try{
+      if(up){
+        SA.setPendingName(name);
+        const cred = await SA.auth.createUserWithEmailAndPassword(email, pw);
+        try{ await cred.user.updateProfile({ displayName: name }); }catch(_){}
+        try{ await cred.user.sendEmailVerification(); }catch(_){}
+      }else{
+        await SA.auth.signInWithEmailAndPassword(email, pw);
+      }
+    }catch(ex){ err.textContent = errMsg(ex); btn.disabled = false; }
+  });
+
+  $("gGoogle").addEventListener("click", async () => {
+    const err = $("gErr"); err.textContent = "";
+    try{ await SA.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    catch(ex){ err.textContent = errMsg(ex); }
+  });
+
+  const reset = $("gReset");
+  if(reset) reset.addEventListener("click", async () => {
+    const err = $("gErr"), email = $("gEmail").value.trim();
+    if(!email){ err.textContent = "위 이메일 칸에 주소를 입력한 뒤 다시 눌러 주세요."; return; }
+    try{ await SA.auth.sendPasswordResetEmail(email); err.style.color = "var(--accent)"; err.textContent = "비밀번호 재설정 메일을 보냈습니다. 메일함을 확인해 주세요."; }
+    catch(ex){ err.style.color = ""; err.textContent = errMsg(ex); }
+  });
+}
+
+function renderPending(user){
+  gate.hidden = false;
+  const needVerify = user && user.email && user.email.toLowerCase() === SA.ADMIN_EMAIL && !user.emailVerified;
+  gateBody.innerHTML = `
+    <h2>${needVerify ? "이메일 인증이 필요합니다" : "승인을 기다리고 있습니다"}</h2>
+    <div class="sub">${esc((profile && profile.name) || "")} ${esc((profile && profile.email) || "")}</div>
+    <div class="g-msg">${needVerify
+      ? "관리자 계정은 이메일 인증을 마쳐야 관리자 권한이 적용됩니다. 가입 때 발송된 인증 메일의 링크를 누른 뒤 아래 '인증 완료, 다시 확인'을 눌러 주세요. Google 계정으로 로그인하면 인증 없이 바로 적용됩니다."
+      : "가입 신청이 접수되었습니다. 관리자가 승인하고 등급을 지정하면 이 화면이 자동으로 열립니다."}</div>
+    ${needVerify ? `<button class="g-btn" id="gRecheck" type="button">인증 완료, 다시 확인</button>
+                    <button class="g-btn ghost" id="gResend" type="button">인증 메일 다시 보내기</button>` : ""}
+    <button class="g-btn ghost" id="gOut" type="button">로그아웃</button>
+    <div class="g-err" id="gErr" style="margin-top:8px"></div>`;
+  $("gOut").addEventListener("click", logout);
+  const rc = $("gRecheck");
+  if(rc) rc.addEventListener("click", async () => {
+    try{ await user.reload(); await user.getIdToken(true); location.reload(); }
+    catch(ex){ $("gErr").textContent = errMsg(ex); }
+  });
+  const rs = $("gResend");
+  if(rs) rs.addEventListener("click", async () => {
+    try{ await user.sendEmailVerification(); $("gErr").style.color = "var(--accent)"; $("gErr").textContent = "인증 메일을 다시 보냈습니다."; }
+    catch(ex){ $("gErr").textContent = errMsg(ex); }
+  });
+}
+
+function logout(){
+  if(unsubProfile) unsubProfile();
+  if(unsubUsers) unsubUsers();
+  SA.auth.signOut().then(() => location.reload());
+}
+$("btnLogout").addEventListener("click", logout);
+
+function route(user){
+  if(!profile || profile.role === "pending"){ renderPending(user); return; }
+  gate.hidden = true;
+  $("uName").textContent = profile.name || profile.email || "";
+  $("uRole").textContent = SA.ROLE_LABELS[profile.role] || profile.role;
+  $("tbUser").hidden = false;
+  $("btnLogout").hidden = false;
+  $("btnUsers").hidden = profile.role !== "admin";
+  if(profile.role === "admin" && !unsubUsers) watchUsers();
+  if(!shellStarted){
+    shellStarted = true;
+    VIS = LINKS.filter(l => SA.can(profile.role, l.key, "read"));
+    renderNav();
+    if(VIS.length) selectItem(0);
+  }
+}
+
+/* ---------- 관리자: 사용자 관리 ---------- */
+function watchUsers(){
+  unsubUsers = SA.db.collection("users").onSnapshot(snap => {
+    usersCache = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    const n = usersCache.filter(u => u.role === "pending").length;
+    $("pendDot").hidden = !n; $("pendDot").textContent = n;
+    if(!$("usersModal").hidden) renderUsers();
+  }, err => console.warn("users snapshot error", err));
+}
+function renderUsers(){
+  const list = $("uList");
+  if(!usersCache.length){ list.innerHTML = `<div class="g-msg" style="padding:20px">등록된 사용자가 없습니다.</div>`; return; }
+  const me = SA.auth.currentUser;
+  const rows = usersCache.slice().sort((a,b) =>
+    (a.role === "pending" ? 0 : 1) - (b.role === "pending" ? 0 : 1) || String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
+  list.innerHTML = rows.map(u => {
+    const locked = (me && u.id === me.uid) || String(u.email||"").toLowerCase() === SA.ADMIN_EMAIL;
+    const opts = SA.ROLE_ORDER.map(r => `<option value="${r}"${u.role===r?" selected":""}>${esc(SA.ROLE_LABELS[r])}</option>`).join("");
+    return `<div class="u-row${u.role==="pending"?" pend":""}" data-uid="${esc(u.id)}">
+      <div><div class="u-name">${esc(u.name || "(이름 없음)")}</div><div class="u-mail">${esc(u.email||"")} · 가입 ${esc(fmtDate(u.createdAt))}</div></div>
+      <select data-act="role"${locked?" disabled":""}>${opts}</select>
+      <button class="u-del" data-act="del" type="button"${locked?" disabled":""}>삭제</button>
+    </div>`;
+  }).join("");
+}
+$("btnUsers").addEventListener("click", () => { renderUsers(); $("usersModal").hidden = false; });
+$("usersClose").addEventListener("click", () => { $("usersModal").hidden = true; });
+$("usersModal").addEventListener("click", e => { if(e.target.id === "usersModal") $("usersModal").hidden = true; });
+$("uList").addEventListener("change", async e => {
+  const sel = e.target.closest("select[data-act='role']"); if(!sel) return;
+  const uid = sel.closest(".u-row").dataset.uid;
+  try{ await SA.db.collection("users").doc(uid).update({ role: sel.value, updatedAt: new Date().toISOString() }); }
+  catch(ex){ alert("등급을 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요."); renderUsers(); }
+});
+$("uList").addEventListener("click", async e => {
+  const btn = e.target.closest("button[data-act='del']"); if(!btn) return;
+  if(btn.dataset.armed !== "1"){
+    btn.dataset.armed = "1"; btn.textContent = "한 번 더"; btn.classList.add("armed");
+    setTimeout(() => { if(btn.isConnected){ btn.dataset.armed = "0"; btn.textContent = "삭제"; btn.classList.remove("armed"); } }, 3000);
+    return;
+  }
+  const uid = btn.closest(".u-row").dataset.uid;
+  try{ await SA.db.collection("users").doc(uid).delete(); }
+  catch(ex){ alert("삭제하지 못했습니다. 잠시 후 다시 시도해 주세요."); }
+});
+
+/* ---------- 시작 ---------- */
+if(!SA.configured()){
+  // Firebase 설정이 비어 있으면 예전처럼 로그인 없이 미리보기만 제공
+  $("setupBanner").classList.add("show");
+  renderNav(); selectItem(0);
+} else if(!SA.boot()){
+  showGateMsg("불러오지 못했습니다", "로그인 모듈을 불러오지 못했습니다. 네트워크를 확인한 뒤 새로고침해 주세요.");
+} else {
+  showGateMsg("안전관리 툴박스", "불러오는 중…");
+  SA.auth.onAuthStateChanged(async user => {
+    if(unsubProfile){ unsubProfile(); unsubProfile = null; }
+    if(!user){ profile = null; lastRole = null; renderLogin("in"); return; }
+    showGateMsg("안전관리 툴박스", "불러오는 중…");
+    try{ await SA.ensureProfile(user); }
+    catch(ex){
+      console.warn(ex);
+      showGateMsg("권한을 확인하지 못했습니다", "잠시 후 새로고침해 주세요. 계속되면 관리자에게 문의해 주세요.");
+      return;
+    }
+    unsubProfile = SA.db.collection("users").doc(user.uid).onSnapshot(snap => {
+      if(!snap.exists) return;
+      profile = snap.data();
+      if(lastRole !== null && lastRole !== profile.role){ location.reload(); return; }
+      lastRole = profile.role;
+      route(user);
+    }, err => {
+      console.warn(err);
+      showGateMsg("권한을 확인하지 못했습니다", "잠시 후 새로고침해 주세요.");
+    });
+  });
+}
 </script>
 </body>
 </html>
