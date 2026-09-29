@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>아차사고 · 현장순회점검</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<script>window.TOOL_KEY = "nm";</script>
+<script src="../auth.js"></script>
+<style>
+  :root{
+    --ink:#17212c; --ink-soft:#525f6e; --ink-faint:#8a94a3;
+    --paper:#eef1f4; --surface:#ffffff; --surface-2:#f5f7f9;
+    --line:#dbe0e6; --accent:#1d5673; --accent-soft:#e4edf1; --accent-ink:#ffffff;
+    --hazard:#c97f16; --hazard-soft:#faf1e0;
+    --bad:#b3372b; --bad-soft:#f7e3e0; --good:#2f7d57; --good-soft:#e1efe7;
+    --font:"Noto Sans KR","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",-apple-system,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#e7ecf1; --ink-soft:#aab5c2; --ink-faint:#7c8896;
+      --paper:#0d1218; --surface:#182029; --surface-2:#1d2731;
+      --line:#2c3843; --accent:#7fbcdb; --accent-soft:#1c2e38; --accent-ink:#0c222c;
+      --hazard:#e0a24a; --hazard-soft:#332810;
+      --bad:#e2776b; --bad-soft:#3a201d; --good:#66b98c; --good-soft:#1c2e24;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper)}
+  body{font-family:var(--font);color:var(--ink);font-size:14px;line-height:1.55;-webkit-text-size-adjust:100%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .bar{display:flex;align-items:center;gap:12px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:var(--surface);border-bottom:3px solid var(--hazard);position:sticky;top:0;z-index:20}
+  .bar h1{font-size:15px;margin:0;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar a.back{color:var(--accent);text-decoration:none;font-weight:700;font-size:13px;white-space:nowrap}
+  .role{font-size:11.5px;color:var(--ink-soft);white-space:nowrap}
+  .banner{margin:12px 16px 0;padding:10px 14px;background:var(--hazard-soft);border:1px solid var(--hazard);font-size:13px}
+  .banner[hidden]{display:none}
+  .tabs{display:flex;gap:2px;padding:0 16px;margin-top:12px;border-bottom:1px solid var(--line);overflow-x:auto}
+  .tabs button{flex:0 0 auto;background:none;border:none;border-bottom:2px solid transparent;padding:10px 14px;font:700 14px var(--font);color:var(--ink-soft);cursor:pointer}
+  .tabs button.on{color:var(--ink);border-bottom-color:var(--hazard)}
+  .cnt{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;font-size:11px;line-height:18px;text-align:center;color:#fff;background:var(--bad);border-radius:9px}
+  .cnt:empty{display:none}
+  main{max-width:1000px;margin:0 auto;padding:16px}
+  .view{display:none}.view.on{display:block}
+  .card{background:var(--surface);border:1px solid var(--line);padding:16px;margin-bottom:16px}
+  .card h2{font-size:15px;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  label{display:block;font-size:12.5px;color:var(--ink-soft);margin:12px 0 4px}
+  label:first-of-type{margin-top:0}
+  input,select,textarea{width:100%;padding:9px 10px;font:14px var(--font);color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:0}
+  textarea{min-height:64px;resize:vertical}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  button.primary{margin-top:16px;width:100%;padding:12px;background:var(--accent);color:var(--accent-ink);border:none;font:700 14px var(--font);cursor:pointer}
+  button.primary:disabled{opacity:.55;cursor:default}
+  .hint{font-size:12px;color:var(--ink-faint);margin-top:8px}
+  .sbtn{font:600 12px var(--font);padding:5px 10px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer;white-space:nowrap}
+  .sbtn:hover{color:var(--ink)}
+  .sbtn.danger{color:var(--bad);border-color:var(--bad)}
+  .sbtn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .tag{display:inline-block;padding:1px 8px;font-size:11.5px;font-weight:700;border:1px solid currentColor;white-space:nowrap}
+  .tag.good{color:var(--good);background:var(--good-soft)}.tag.bad{color:var(--bad);background:var(--bad-soft)}
+  .tag.warn{color:var(--hazard);background:var(--hazard-soft)}.tag.off{color:var(--ink-faint);background:var(--surface-2)}
+  .filters{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .filters select{width:auto;min-width:130px;padding:6px 8px;font-size:13px}
+  .empty{padding:22px 0;text-align:center;color:var(--ink-faint);font-size:13px}
+  .rec{border-top:1px solid var(--line)}
+  .rec:first-child{border-top:none}
+  .rec-h{display:flex;width:100%;gap:10px;align-items:flex-start;justify-content:space-between;padding:11px 0;background:none;border:none;text-align:left;cursor:pointer;font:14px var(--font);color:var(--ink)}
+  .rec-h .t{font-weight:700}
+  .rec-h .s{font-size:12.5px;color:var(--ink-soft);margin-top:1px}
+  .rec-b{padding:2px 0 14px}
+  .kv{display:grid;grid-template-columns:96px 1fr;gap:4px 10px;font-size:13px;margin:0 0 10px}
+  .kv dt{color:var(--ink-soft)}.kv dd{margin:0;white-space:pre-wrap;word-break:break-word}
+  .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .photos{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .photos img{width:76px;height:76px;object-fit:cover;border:1px solid var(--line);cursor:zoom-in;display:block}
+  .plabel{font-size:12px;color:var(--ink-soft);margin-top:8px}
+  .cat{font-size:12px;font-weight:700;color:var(--ink-soft);margin:14px 0 4px}
+  .cat:first-child{margin-top:0}
+  .ci{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .ci .nm{flex:1;font-size:13.5px}
+  .seg{display:flex;border:1px solid var(--line)}
+  .seg button{padding:6px 11px;font:600 12.5px var(--font);border:none;border-right:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer}
+  .seg button:last-child{border-right:none}
+  .seg button.on.g{background:var(--good-soft);color:var(--good)}.seg button.on.b{background:var(--bad-soft);color:var(--bad)}.seg button.on.n{background:var(--surface-2);color:var(--ink)}
+  .note{display:none;margin:6px 0 8px}.note.show{display:block}
+  .score{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .score b{font-size:24px;font-variant-numeric:tabular-nums}
+  .pk{margin-top:8px}.pk .pa{display:flex;gap:6px;flex-wrap:wrap}
+  .pk .th{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .pk .th div{position:relative;width:54px;height:54px;border:1px solid var(--line)}
+  .pk .th img{width:100%;height:100%;object-fit:cover;display:block}
+  .pk .th button{position:absolute;top:0;right:0;width:17px;height:17px;padding:0;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:16px;cursor:pointer}
+  .pk .cam{border-color:var(--hazard);color:var(--hazard)}
+  .form-in{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+  .modal{position:fixed;inset:0;display:none;z-index:50;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:14px}
+  .modal.show{display:flex}
+  .cambox{width:100%;max-width:520px;background:#111;color:#fff}
+  .cambox video{width:100%;display:block;background:#000;max-height:62vh;object-fit:cover}
+  .camact{display:flex;gap:8px;padding:12px}
+  .camact button{flex:1;padding:12px 6px;font:700 14px var(--font);border:none;background:#333;color:#fff;cursor:pointer}
+  .camact button.shot{background:var(--hazard)}
+  .caminfo{padding:0 12px 12px;font-size:12.5px;color:#c9cfc9}
+  #lightbox img{max-width:100%;max-height:100%}
+  .pmodal{position:fixed;inset:0;display:none;z-index:60;background:rgba(13,18,24,.93);overflow:auto;padding:12px}
+  .pmodal.show{display:block}
+  .pmbar{display:flex;gap:8px;max-width:760px;margin:0 auto 8px}
+  .pmbar button{flex:1;padding:11px 6px;font:700 13.5px var(--font);border:none;background:#333;color:#fff;cursor:pointer}
+  .pmbar button.p{background:var(--hazard)}
+  .pmhint{max-width:760px;margin:0 auto 10px;color:#c9cfc9;font-size:12.5px}
+  .paper{max-width:760px;margin:0 auto;padding:28px 26px}
+  #printArea{display:none}
+  @media print{
+    @page{margin:18mm}
+    html,body{background:#fff!important}
+    body>*:not(#printArea){display:none!important}
+    #printArea{display:block!important}
+  }
+  @media (max-width:560px){.row2{grid-template-columns:1fr}.kv{grid-template-columns:82px 1fr}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <a class="back" href="../index.html">← 툴박스</a>
+  <h1>아차사고 · 현장순회점검</h1>
+  <span class="role" id="roleBadge"></span>
+</header>
+<div class="banner" id="banner" hidden></div>
+
+<nav class="tabs" id="tabs">
+  <button class="on" data-v="nm">아차사고 신고</button>
+  <button data-v="pt">현장순회점검</button>
+  <button data-v="ca">시정조치 <span class="cnt" id="caBadge"></span></button>
+</nav>
+
+<main>
+  <!-- 아차사고 -->
+  <section class="view on" id="v-nm">
+    <div class="card" id="nmFormCard">
+      <h2>아차사고 신고</h2>
+      <label>현장</label><select id="nmSite"></select>
+      <div class="row2">
+        <div><label>발생일시</label><input type="datetime-local" id="nmTime"></div>
+        <div><label>유형</label><select id="nmType"></select></div>
+      </div>
+      <label>발생 장소</label><input type="text" id="nmPlace" placeholder="예: 3층 슬라브 단부">
+      <label>상황 설명</label><textarea id="nmDesc" placeholder="무슨 일이 있었는지 구체적으로"></textarea>
+      <label>즉시 조치사항</label><textarea id="nmAction" placeholder="현장에서 바로 취한 조치"></textarea>
+      <label>사진</label><div class="pk" id="nmPk"></div>
+      <button class="primary" id="nmSubmit">신고 제출</button>
+      <div class="hint">제출하면 시정조치 대기함에 자동으로 등록됩니다.</div>
+    </div>
+    <div class="card">
+      <h2>신고 목록</h2>
+      <div class="filters"><select id="nmFSite"></select><select id="nmFState"><option value="">전체 상태</option><option value="open">조치 필요</option><option value="done">조치 완료</option></select></div>
+      <div id="nmList"></div>
+    </div>
+  </section>
+
+  <!-- 순회점검 -->
+  <section class="view" id="v-pt">
+    <div class="card" id="ptFormCard">
+      <h2>점검 실시</h2>
+      <div class="row2">
+        <div><label>현장</label><select id="ptSite"></select></div>
+        <div><label>점검일자</label><input type="date" id="ptDate"></div>
+      </div>
+      <div id="ptChecklist" style="margin-top:14px"></div>
+      <div class="score"><span>실시간 이행률</span><b id="ptScore">—</b></div>
+      <button class="primary" id="ptSubmit">점검 결과 제출</button>
+      <div class="hint">'미흡' 항목은 특이사항 입력이 필수이며, 제출하면 시정조치 대기함에 자동으로 등록됩니다. 사진은 선택입니다.</div>
+    </div>
+    <div class="card">
+      <h2>점검 이력</h2>
+      <div class="filters"><select id="ptFSite"></select></div>
+      <div id="ptList"></div>
+    </div>
+  </section>
+
+  <!-- 시정조치 -->
+  <section class="view" id="v-ca">
+    <div class="card">
+      <h2>시정조치 대기함</h2>
+      <div class="filters">
+        <select id="caFSite"></select>
+        <select id="caFState"><option value="open">대기</option><option value="done">완료</option><option value="">전체</option></select>
+      </div>
+      <div id="caList"></div>
+      <div class="hint">완료 처리할 때는 조치 후 사진을 1장 이상 첨부해야 합니다.</div>
+    </div>
+  </section>
+</main>
+
+<!-- 카메라 -->
+<div class="modal" id="camModal">
+  <div class="cambox">
+    <video id="camVideo" autoplay playsinline muted></video>
+    <div class="camact"><button class="shot" id="camShot" type="button">촬영</button><button id="camFlip" type="button">전·후면 전환</button><button id="camClose" type="button">완료</button></div>
+    <div class="caminfo" id="camInfo"></div>
+  </div>
+</div>
+<div class="modal" id="lightbox"><img alt=""></div>
+
+<!-- 출력 미리보기 -->
+<div class="pmodal" id="pModal">
+  <div class="pmbar"><button class="p" id="pmPrint" type="button">인쇄</button><button id="pmWin" type="button">새 창에서 열기</button><button id="pmClose" type="button">닫기</button></div>
+  <div class="pmhint">아래가 인쇄될 문서입니다. [인쇄]가 반응하지 않으면 [새 창에서 열기]로 열어 인쇄하세요.</div>
+  <div class="paper doc" id="pmBody"></div>
+</div>
+<div id="printArea" class="doc"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================================
+   아차사고 · 현장순회점검  (도구 키: nm)
+   - 현장 목록: 기존 'siteRegistry' 컬렉션을 그대로 읽음 (중대재해 이행점검 도구에서 등록·관리)
+   - 저장 컬렉션: nm_reports(아차사고) / nm_patrols(순회점검) / nm_actions(시정조치)
+     · 사진은 각 문서의 photos 하위 컬렉션에 압축 이미지(base64)로 저장 (기존 도구와 같은 방식)
+   ========================================================================= */
+
+const SA = window.SafetyAuth;
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const iso = () => new Date().toISOString();
+function nowInput(){ const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtLocal(s){ const d = new Date(s); return isNaN(d) ? "-" : `${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function daysSince(s){ const d = new Date(s); return isNaN(d) ? 0 : Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000)); }
+
+const NM_TYPES = ["추락위험","협착위험","낙하물","전도위험","화재위험","감전위험","기타"];
+const CHECKLIST = [
+  {cat:"안전통로/개구부", items:["안전통로 확보","개구부 덮개·안전난간 설치"]},
+  {cat:"개인보호구",       items:["안전모 착용 상태","고소작업 안전대 착용"]},
+  {cat:"가설전기",         items:["배선·누전차단기 상태","분전반 정리상태"]},
+  {cat:"고소작업",         items:["작업발판·안전난간 설치","추락방지망 설치상태"]},
+  {cat:"화기작업",         items:["화기작업허가서 확인","소화기 비치 및 상태"]},
+  {cat:"중장비",           items:["신호수 배치","장비 작업반경 출입통제"]}
+];
+const MAX_PHOTOS = 8;
+
+const S = { user:null, role:"pending", lv:null, name:"", sites:[], nm:[], pt:[], ca:[], open:new Set(), drafts:{} };
+let db = null;
+const photoCache = new Map();
+
+const canWrite  = () => S.lv === "write" || S.lv === "delete";
+const canManage = () => S.role === "hq" || S.role === "admin";
+const canDelete = () => S.lv === "delete";
+
+function banner(msg){ const b = $("banner"); if(!msg){ b.hidden = true; return; } b.hidden = false; b.textContent = msg; }
+function onErr(e){
+  console.warn(e);
+  if(e && e.code === "permission-denied") banner("데이터를 불러오거나 저장할 권한이 없습니다. 관리자에게 Firestore 보안 규칙(nm_reports · nm_patrols · nm_actions) 적용 여부를 확인해 달라고 요청해 주세요.");
+  else if(e && e.code === "unavailable") banner("네트워크 연결이 불안정합니다. 연결을 확인한 뒤 새로고침해 주세요.");
+}
+
+/* ---------------- 사진 처리 ---------------- */
+function loadImageEl(src){ return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+async function compress(src){
+  const img = await loadImageEl(src);
+  let maxDim = 900, quality = 0.6;
+  for(let n = 0; n < 5; n++){
+    const sc = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const cv = document.createElement("canvas");
+    cv.width = Math.max(1, Math.round(img.width * sc)); cv.height = Math.max(1, Math.round(img.height * sc));
+    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+    const url = cv.toDataURL("image/jpeg", quality);
+    if(url.length < 235000 || n === 4) return url;
+    quality = Math.max(0.25, quality - 0.15); maxDim = Math.round(maxDim * 0.85);
+  }
+}
+
+const camModal = $("camModal"), camVideo = $("camVideo");
+let camStream = null, camFacing = "environment", camCb = null, camShots = 0;
+function stopStream(){ if(camStream){ camStream.getTracks().forEach(t => t.stop()); camStream = null; } }
+async function startStream(){ stopStream(); camStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:camFacing}}, audio:false}); camVideo.srcObject = camStream; }
+function camInfo(){ $("camInfo").textContent = camShots ? `이번에 촬영한 사진 ${camShots}장 — 계속 촬영하거나 [완료]를 누르세요.` : "촬영 버튼을 누르면 사진이 바로 첨부됩니다."; }
+async function openCamera(cb, fallback){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ fallback.click(); return; }
+  camCb = cb; camShots = 0; camInfo(); camModal.classList.add("show");
+  try{ await startStream(); } catch(e){ closeCamera(); fallback.click(); }
+}
+function closeCamera(){ stopStream(); camModal.classList.remove("show"); camCb = null; }
+$("camClose").onclick = closeCamera;
+$("camFlip").onclick = async () => { camFacing = camFacing === "environment" ? "user" : "environment"; try{ await startStream(); }catch(e){} };
+$("camShot").onclick = () => {
+  const v = camVideo; if(!v.videoWidth || !camCb) return;
+  const cv = document.createElement("canvas"); cv.width = v.videoWidth; cv.height = v.videoHeight;
+  cv.getContext("2d").drawImage(v, 0, 0);
+  cv.toBlob(b => { if(!b || !camCb) return; camCb(URL.createObjectURL(b)); camShots++; camInfo(); }, "image/jpeg", 0.9);
+};
+
+/* 사진 첨부 위젯 — store 배열을 호출 쪽이 소유(목록이 다시 그려져도 작성 중인 사진이 유지됨) */
+function makePicker(mount, store, max){
+  mount.innerHTML = "";
+  let busy = 0;
+  const pa = document.createElement("div"); pa.className = "pa";
+  const cam = document.createElement("button"); cam.type = "button"; cam.className = "sbtn cam"; cam.textContent = "📷 바로 촬영";
+  const alb = document.createElement("button"); alb.type = "button"; alb.className = "sbtn"; alb.textContent = "🖼 앨범에서 선택";
+  const fin = document.createElement("input"); fin.type = "file"; fin.accept = "image/*"; fin.multiple = true; fin.hidden = true;
+  const cin = document.createElement("input"); cin.type = "file"; cin.accept = "image/*"; cin.setAttribute("capture", "environment"); cin.hidden = true;
+  const th = document.createElement("div"); th.className = "th";
+  function render(){
+    th.innerHTML = "";
+    store.forEach((u, i) => { const d = document.createElement("div"); d.innerHTML = `<img src="${u}" alt=""><button type="button" data-i="${i}">×</button>`; th.appendChild(d); });
+  }
+  async function addSrc(src, revoke){
+    if(store.length >= max){ alert(`사진은 최대 ${max}장까지 첨부할 수 있습니다.`); if(revoke) URL.revokeObjectURL(src); return; }
+    busy++;
+    try{ store.push(await compress(src)); render(); } catch(e){ alert("사진을 처리하지 못했습니다."); }
+    finally{ if(revoke) URL.revokeObjectURL(src); busy--; }
+  }
+  function onFiles(e){ Array.from(e.target.files).forEach(f => addSrc(URL.createObjectURL(f), true)); e.target.value = ""; }
+  fin.onchange = onFiles; cin.onchange = onFiles;
+  cam.onclick = () => openCamera(u => addSrc(u, true), cin);
+  alb.onclick = () => fin.click();
+  th.onclick = e => { const b = e.target.closest("button[data-i]"); if(b){ store.splice(+b.dataset.i, 1); render(); } };
+  pa.append(cam, alb); mount.append(pa, fin, cin, th); render();
+  return { isBusy: () => busy > 0, clear(){ store.length = 0; render(); } };
+}
+
+document.addEventListener("click", e => {
+  const im = e.target.closest("img[data-zoom]");
+  if(im){ const lb = $("lightbox"); lb.querySelector("img").src = im.src; lb.classList.add("show"); }
+});
+$("lightbox").onclick = () => $("lightbox").classList.remove("show");
+
+async function loadPhotos(path){
+  if(photoCache.has(path)) return photoCache.get(path);
+  const snap = await db.collection(path).get();
+  const arr = snap.docs.map(d => ({id:d.id, ...d.data()}));
+  photoCache.set(path, arr);
+  return arr;
+}
+const imgs = arr => arr.map(p => `<img src="${p.data}" alt="" data-zoom>`).join("");
+
+/* ---------------- 출력 (사내 공문 형식) ---------------- */
+const HANGUL = ["가","나","다","라","마","바","사","아","자","차","카","타","파","하"];
+const DOC_CSS = `
+.doc{color:#000;background:#fff;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;font-size:11pt;line-height:1.75}
+.doc h1{font-size:17pt;font-weight:900;text-align:center;margin:0 0 20pt}
+.doc p{margin:0 0 5pt;white-space:pre-wrap}
+.doc p.sub{padding-left:16pt}
+.doc p.sign{margin-top:28pt;text-align:right;font-weight:900}
+.doc .att{margin-top:16pt;page-break-inside:avoid}
+.doc .att b{display:block;margin-bottom:6pt}
+.doc img{width:46%;margin:0 2% 8pt 0;display:inline-block;vertical-align:top;page-break-inside:avoid}`;
+{ const st = document.createElement("style"); st.textContent = DOC_CSS; document.head.appendChild(st); }
+let curDoc = "";
+function showDoc(title, clauses, atts){
+  let h = `<h1>${esc(title)}</h1>`;
+  clauses.forEach((c, i) => {
+    h += `<p>${i+1}. ${esc(c.label)}${c.value !== undefined ? " : " + esc(c.value) : ""}</p>`;
+    (c.subs || []).forEach((s, j) => { h += `<p class="sub">${HANGUL[j] || "•"}. ${esc(s)}</p>`; });
+  });
+  atts = atts.filter(a => a.photos.length);
+  if(atts.length){
+    h += `<p style="margin-top:10pt">붙임 : ${atts.map((a, i) => `${i+1}. ${esc(a.label)} ${a.photos.length}장`).join("  ")}  끝.</p>`;
+    atts.forEach((a, i) => { h += `<div class="att"><b>[붙임 ${i+1}] ${esc(a.label)}</b>${a.photos.map(p => `<img src="${p.data}" alt="">`).join("")}</div>`; });
+  } else h += `<p style="margin-top:10pt">끝.</p>`;
+  h += `<p class="sign">작성자 :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(서명)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;확인자 :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(서명)</p>`;
+  curDoc = h; $("pmBody").innerHTML = h; $("pModal").classList.add("show");
+}
+$("pmClose").onclick = () => $("pModal").classList.remove("show");
+$("pmPrint").onclick = () => {
+  const a = $("printArea"); a.innerHTML = curDoc;
+  Promise.all(Array.from(a.querySelectorAll("img")).map(i => i.decode ? i.decode().catch(()=>{}) : Promise.resolve()))
+    .then(() => { try{ window.print(); }catch(e){ alert("이 화면에서는 인쇄 창을 열 수 없습니다. [새 창에서 열기]를 이용해 주세요."); } });
+};
+$("pmWin").onclick = () => {
+  const w = window.open("", "_blank");
+  if(!w){ alert("새 창이 차단되었습니다. 브라우저의 팝업 허용 후 다시 시도해 주세요."); return; }
+  w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>출력</title><style>@page{margin:18mm}body{margin:0;padding:18mm}${DOC_CSS}</style></head><body class="doc">${curDoc}</body></html>`);
+  w.document.close(); setTimeout(() => { try{ w.focus(); w.print(); }catch(e){} }, 600);
+};
+
+/* ---------------- 현장 목록 (siteRegistry 연동) ---------------- */
+function siteNamesInRecords(){
+  const set = new Set();
+  [...S.nm, ...S.pt, ...S.ca].forEach(r => r.site && set.add(r.site));
+  return Array.from(set);
+}
+function fillSelect(sel, names, {all, allLabel, emptyLabel} = {}){
+  const prev = sel.value; sel.innerHTML = "";
+  if(all){ const o = document.createElement("option"); o.value = ""; o.textContent = allLabel || "전체 현장"; sel.appendChild(o); }
+  if(!all && !names.length){ const o = document.createElement("option"); o.value = ""; o.textContent = emptyLabel || "(등록된 현장 없음)"; sel.appendChild(o); return; }
+  names.forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); });
+  if(names.includes(prev)) sel.value = prev;
+}
+function fillSites(){
+  const reg = S.sites;
+  const empty = "(등록된 현장 없음 — 중대재해 이행점검 도구에서 현장을 먼저 등록하세요)";
+  fillSelect($("nmSite"), reg, {emptyLabel: empty});
+  fillSelect($("ptSite"), reg, {emptyLabel: empty});
+  const all = Array.from(new Set([...reg, ...siteNamesInRecords()]));
+  ["nmFSite","ptFSite","caFSite"].forEach(id => fillSelect($(id), all, {all:true}));
+}
+
+/* ---------------- 상태 계산 ---------------- */
+const actionOf = (src, id, idx) => S.ca.find(a => a.src === src && a.srcId === id && (idx == null || a.srcItemIdx === idx));
+function stateTag(a){
+  if(!a) return `<span class="tag off">-</span>`;
+  return a.status === "done" ? `<span class="tag good">조치 완료</span>` : `<span class="tag bad">조치 필요</span>`;
+}
+function ddayTag(a){
+  if(a.status === "done") return `<span class="tag good">완료</span>`;
+  const d = daysSince(a.createdAt);
+  return `<span class="tag ${d >= 7 ? "bad" : d >= 3 ? "warn" : "off"}">${d === 0 ? "신규" : "D+" + d + "일"}</span>`;
+}
+
+/* ---------------- 아차사고 ---------------- */
+const nmStore = [];
+let nmPicker = null;
+$("nmType").innerHTML = NM_TYPES.map(t => `<option>${t}</option>`).join("");
+
+$("nmSubmit").onclick = async () => {
+  if(!canWrite()) return;
+  const site = $("nmSite").value, desc = $("nmDesc").value.trim();
+  if(!site){ alert("현장을 선택해 주세요. 등록된 현장이 없다면 중대재해 이행점검 도구에서 먼저 등록해야 합니다."); return; }
+  if(!desc){ alert("상황 설명을 입력해 주세요."); return; }
+  if(nmPicker.isBusy()){ alert("사진을 처리하는 중입니다. 잠시 후 다시 눌러 주세요."); return; }
+  const btn = $("nmSubmit"); btn.disabled = true; btn.textContent = "저장 중…";
+  try{
+    const type = $("nmType").value, now = iso();
+    const ref = db.collection("nm_reports").doc();
+    const urls = nmStore.slice();
+    await Promise.all(urls.map(data => ref.collection("photos").add({data, createdAt: now})));
+    const who = {createdBy: S.user.uid, createdByName: S.name};
+    const batch = db.batch();
+    batch.set(ref, {site, type, occurredAt: $("nmTime").value, place: $("nmPlace").value.trim(), desc, action: $("nmAction").value.trim(), photoCount: urls.length, createdAt: now, ...who});
+    batch.set(db.collection("nm_actions").doc(), {site, src:"nm", srcId: ref.id, srcItemIdx: -1, srcLabel: type, issue: `${type} — ${desc.slice(0, 40)}${desc.length > 40 ? "…" : ""}`, status:"open", createdAt: now, afterCount: 0, ...who});
+    await batch.commit();
+    ["nmDesc","nmAction","nmPlace"].forEach(id => $(id).value = "");
+    $("nmTime").value = nowInput(); nmPicker.clear();
+  }catch(e){ onErr(e); alert("저장하지 못했습니다. 잠시 후 다시 시도해 주세요."); }
+  finally{ btn.disabled = false; btn.textContent = "신고 제출"; }
+};
+
+function renderNm(){
+  const fs = $("nmFSite").value, fst = $("nmFState").value;
+  const rows = S.nm.filter(r => (!fs || r.site === fs) && (!fst || (actionOf("nm", r.id) || {}).status === fst));
+  $("nmList").innerHTML = rows.length ? rows.map(r => {
+    const a = actionOf("nm", r.id), open = S.open.has("nm:" + r.id);
+    return `<div class="rec" data-k="nm:${r.id}">
+      <button class="rec-h" data-act="toggle"><span><div class="t">${esc(r.site)} · ${esc(r.type)}</div><div class="s">${esc(fmtLocal(r.occurredAt || r.createdAt))}${r.place ? " · " + esc(r.place) : ""}${r.photoCount ? " · 📷 " + r.photoCount : ""}</div></span>${stateTag(a)}</button>
+      ${open ? `<div class="rec-b">
+        <dl class="kv"><dt>발생일시</dt><dd>${esc((r.occurredAt || "").replace("T", " ") || "-")}</dd><dt>발생 장소</dt><dd>${esc(r.place || "-")}</dd><dt>상황 설명</dt><dd>${esc(r.desc)}</dd><dt>즉시 조치</dt><dd>${esc(r.action || "-")}</dd><dt>신고자</dt><dd>${esc(r.createdByName || "-")}</dd></dl>
+        <div class="photos" data-photos="nm_reports/${r.id}/photos">${r.photoCount ? "사진 불러오는 중…" : ""}</div>
+        <div class="btns"><button class="sbtn" data-act="print">출력</button>${canDelete() ? `<button class="sbtn danger" data-act="del">삭제</button>` : ""}</div>
+      </div>` : ""}</div>`;
+  }).join("") : `<div class="empty">신고 기록이 없습니다.</div>`;
+  hydrate($("nmList"));
+}
+$("nmFSite").onchange = $("nmFState").onchange = renderNm;
+
+/* ---------------- 순회점검 ---------------- */
+const IT = {};   // 점검 항목 입력 상태: id -> {cat,name,result,note,store,picker}
+{
+  const host = $("ptChecklist");
+  CHECKLIST.forEach((g, gi) => {
+    host.insertAdjacentHTML("beforeend", `<div class="cat">${esc(g.cat)}</div>`);
+    g.items.forEach((name, ii) => {
+      const id = gi + "-" + ii;
+      IT[id] = {cat: g.cat, name, result: null, note: "", store: [], picker: null};
+      host.insertAdjacentHTML("beforeend", `<div class="ci" data-id="${id}"><span class="nm">${esc(name)}</span><div class="seg"><button data-v="양호" class="g" type="button">양호</button><button data-v="미흡" class="b" type="button">미흡</button><button data-v="해당없음" class="n" type="button">해당없음</button></div></div>
+        <div class="note" id="note-${id}"><textarea placeholder="특이사항 (필수)"></textarea><div class="pk"></div></div>`);
+      const noteEl = $("note-" + id);
+      noteEl.querySelector("textarea").oninput = e => { IT[id].note = e.target.value; };
+      IT[id].picker = makePicker(noteEl.querySelector(".pk"), IT[id].store, 5);
+    });
+  });
+  host.addEventListener("click", e => {
+    const b = e.target.closest(".seg button"); if(!b) return;
+    const row = b.closest(".ci"), id = row.dataset.id;
+    IT[id].result = b.dataset.v;
+    row.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+    $("note-" + id).classList.toggle("show", b.dataset.v === "미흡");
+    calcScore();
+  });
+}
+function calcScore(){
+  const v = Object.values(IT).filter(x => x.result && x.result !== "해당없음");
+  const g = v.filter(x => x.result === "양호").length;
+  $("ptScore").textContent = v.length ? Math.round(g / v.length * 100) + "%" : "—";
+}
+$("ptSubmit").onclick = async () => {
+  if(!canWrite()) return;
+  const site = $("ptSite").value, date = $("ptDate").value;
+  if(!site){ alert("현장을 선택해 주세요. 등록된 현장이 없다면 중대재해 이행점검 도구에서 먼저 등록해야 합니다."); return; }
+  const judged = Object.values(IT).filter(x => x.result);
+  const scored = judged.filter(x => x.result !== "해당없음");
+  if(!scored.length){ alert("최소 한 항목 이상 점검 결과를 입력해 주세요."); return; }
+  const missing = judged.find(x => x.result === "미흡" && !x.note.trim());
+  if(missing){ alert(`'${missing.name}' 항목의 특이사항을 입력해 주세요.`); return; }
+  if(Object.values(IT).some(x => x.picker.isBusy())){ alert("사진을 처리하는 중입니다. 잠시 후 다시 눌러 주세요."); return; }
+  const btn = $("ptSubmit"); btn.disabled = true; btn.textContent = "저장 중…";
+  try{
+    const now = iso(), ref = db.collection("nm_patrols").doc();
+    const items = judged.map(x => ({cat:x.cat, name:x.name, result:x.result, note:x.result === "미흡" ? x.note.trim() : "", photoCount:x.store.length}));
+    const good = scored.filter(x => x.result === "양호").length, bad = scored.filter(x => x.result === "미흡").length;
+    const uploads = [];
+    judged.forEach((x, idx) => x.store.forEach(data => uploads.push(ref.collection("photos").add({itemIdx: idx, data, createdAt: now}))));
+    await Promise.all(uploads);
+    const who = {createdBy: S.user.uid, createdByName: S.name};
+    const batch = db.batch();
+    batch.set(ref, {site, date: date || nowInput().slice(0, 10), items, goodCount: good, targetCount: scored.length, score: Math.round(good / scored.length * 100), badCount: bad, createdAt: now, ...who});
+    judged.forEach((x, idx) => { if(x.result === "미흡"){
+      batch.set(db.collection("nm_actions").doc(), {site, src:"pt", srcId: ref.id, srcItemIdx: idx, srcLabel: x.name, issue: `${x.name} — ${x.note.trim().slice(0, 40)}`, status:"open", createdAt: now, afterCount: 0, ...who});
+    }});
+    await batch.commit();
+    Object.values(IT).forEach(x => { x.result = null; x.note = ""; x.picker.clear(); });
+    document.querySelectorAll("#ptChecklist .seg button").forEach(b => b.classList.remove("on"));
+    document.querySelectorAll("#ptChecklist .note").forEach(n => { n.classList.remove("show"); n.querySelector("textarea").value = ""; });
+    calcScore();
+  }catch(e){ onErr(e); alert("저장하지 못했습니다. 잠시 후 다시 시도해 주세요."); }
+  finally{ btn.disabled = false; btn.textContent = "점검 결과 제출"; }
+};
+function renderPt(){
+  const fs = $("ptFSite").value;
+  const rows = S.pt.filter(r => !fs || r.site === fs);
+  $("ptList").innerHTML = rows.length ? rows.map(r => {
+    const open = S.open.has("pt:" + r.id);
+    return `<div class="rec" data-k="pt:${r.id}">
+      <button class="rec-h" data-act="toggle"><span><div class="t">${esc(r.site)}</div><div class="s">${esc(r.date)} · 이행률 ${r.score}% · 미흡 ${r.badCount}건</div></span><span class="tag ${r.badCount ? "warn" : "good"}">${r.badCount ? "미흡 " + r.badCount + "건" : "이상 없음"}</span></button>
+      ${open ? `<div class="rec-b">
+        <dl class="kv"><dt>점검일자</dt><dd>${esc(r.date)}</dd><dt>이행률</dt><dd>${r.score}% (양호 ${r.goodCount}건 / 대상 ${r.targetCount}건)</dd><dt>점검자</dt><dd>${esc(r.createdByName || "-")}</dd></dl>
+        ${(r.items || []).map((it, idx) => `<div class="ci" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><span class="nm">${esc(it.cat)} · ${esc(it.name)}</span><span class="tag ${it.result === "양호" ? "good" : it.result === "미흡" ? "bad" : "off"}">${esc(it.result)}</span></div>${it.note ? `<div class="s" style="color:var(--ink-soft);font-size:12.5px">${esc(it.note)}</div>` : ""}${it.photoCount ? `<div class="photos" data-photos="nm_patrols/${r.id}/photos" data-item="${idx}">사진 불러오는 중…</div>` : ""}</div>`).join("")}
+        <div class="btns"><button class="sbtn" data-act="print">출력</button>${canDelete() ? `<button class="sbtn danger" data-act="del">삭제</button>` : ""}</div>
+      </div>` : ""}</div>`;
+  }).join("") : `<div class="empty">점검 기록이 없습니다.</div>`;
+  hydrate($("ptList"));
+}
+$("ptFSite").onchange = renderPt;
+
+/* ---------------- 시정조치 ---------------- */
+function renderCa(){
+  const fs = $("caFSite").value, fst = $("caFState").value;
+  const rows = S.ca.filter(a => (!fs || a.site === fs) && (!fst || a.status === fst))
+    .sort((a, b) => (a.status === b.status ? String(a.createdAt).localeCompare(String(b.createdAt)) : (a.status === "open" ? -1 : 1)));
+  const openCnt = S.ca.filter(a => a.status === "open").length;
+  $("caBadge").textContent = openCnt ? String(openCnt) : "";
+  $("caList").innerHTML = rows.length ? rows.map(a => {
+    const k = "ca:" + a.id, open = S.open.has(k);
+    const dr = S.drafts[a.id];
+    return `<div class="rec" data-k="${k}">
+      <button class="rec-h" data-act="toggle"><span><div class="t">${esc(a.site)}</div><div class="s">${a.src === "nm" ? "아차사고" : "순회점검"} · ${esc(a.issue)}</div></span>${ddayTag(a)}</button>
+      ${open ? `<div class="rec-b">
+        <dl class="kv"><dt>지적사항</dt><dd>${esc(a.issue)}</dd><dt>등록일</dt><dd>${esc(fmtLocal(a.createdAt))}</dd>${a.status === "done" ? `<dt>조치내용</dt><dd>${esc(a.doneNote || "-")}</dd><dt>완료일</dt><dd>${esc(fmtLocal(a.doneAt))} · ${esc(a.doneByName || "")}</dd>` : ""}</dl>
+        <div class="plabel">조치 전 사진</div><div class="photos" data-before="${a.id}">불러오는 중…</div>
+        ${a.status === "done" ? `<div class="plabel">조치 후 사진</div><div class="photos" data-photos="nm_actions/${a.id}/photos">${a.afterCount ? "불러오는 중…" : ""}</div>` : ""}
+        ${a.status === "open" && canWrite() ? `<div class="form-in" data-form="${a.id}"><label>조치 내용</label><textarea data-role="note" placeholder="조치 내용을 입력하세요">${esc(dr ? dr.note : "")}</textarea><div class="pk" data-role="pk"></div><div class="hint">조치 후 사진 1장 이상이 필요합니다.</div><button class="sbtn pri" data-act="done" style="margin-top:10px">완료 등록</button></div>` : ""}
+        <div class="btns"><button class="sbtn" data-act="print">출력</button>${a.status === "done" && canManage() ? `<button class="sbtn" data-act="reopen">재오픈</button>` : ""}</div>
+      </div>` : ""}</div>`;
+  }).join("") : `<div class="empty">시정조치 항목이 없습니다.</div>`;
+  $("caList").querySelectorAll("[data-form]").forEach(f => {
+    const id = f.dataset.form; const dr = S.drafts[id] || (S.drafts[id] = {note:"", store:[]});
+    f.querySelector("[data-role=note]").oninput = e => { dr.note = e.target.value; };
+    dr._picker = makePicker(f.querySelector("[data-role=pk]"), dr.store, MAX_PHOTOS);
+  });
+  hydrate($("caList"));
+}
+$("caFSite").onchange = $("caFState").onchange = renderCa;
+
+async function beforePhotos(a){
+  if(a.src === "nm") return loadPhotos(`nm_reports/${a.srcId}/photos`);
+  const all = await loadPhotos(`nm_patrols/${a.srcId}/photos`);
+  return all.filter(p => p.itemIdx === a.srcItemIdx);
+}
+
+/* ---------------- 공통: 사진 채우기 · 목록 이벤트 ---------------- */
+async function hydrate(root){
+  for(const el of root.querySelectorAll("[data-photos],[data-before]")){
+    try{
+      let arr;
+      if(el.dataset.before){ const a = S.ca.find(x => x.id === el.dataset.before); arr = a ? await beforePhotos(a) : []; }
+      else{ arr = await loadPhotos(el.dataset.photos); if(el.dataset.item != null) arr = arr.filter(p => p.itemIdx === +el.dataset.item); }
+      el.innerHTML = arr.length ? imgs(arr) : `<span class="s" style="color:var(--ink-faint);font-size:12.5px">사진 없음</span>`;
+    }catch(e){ el.textContent = "사진을 불러오지 못했습니다."; }
+  }
+}
+async function delPhotos(path){ const s = await db.collection(path).get(); await Promise.all(s.docs.map(d => d.ref.delete())); photoCache.delete(path); }
+
+async function doPrint(kind, id){
+  try{
+    if(kind === "nm"){
+      const r = S.nm.find(x => x.id === id), a = actionOf("nm", id), ph = await loadPhotos(`nm_reports/${id}/photos`);
+      showDoc("아차사고 신고서", [
+        {label:"현장", value:r.site}, {label:"발생일시", value:(r.occurredAt || "").replace("T", " ") || "-"}, {label:"발생 장소", value:r.place || "-"},
+        {label:"유형", value:r.type}, {label:"상황 설명", value:r.desc}, {label:"즉시 조치사항", value:r.action || "-"},
+        {label:"처리 상태", value:a ? (a.status === "done" ? "조치 완료" : "조치 필요") : "-"}, {label:"신고자", value:r.createdByName || "-"}
+      ], [{label:"현장 사진", photos:ph}]);
+    } else if(kind === "pt"){
+      const r = S.pt.find(x => x.id === id), ph = await loadPhotos(`nm_patrols/${id}/photos`);
+      const items = r.items || [];
+      showDoc("현장순회점검 결과서", [
+        {label:"현장", value:r.site}, {label:"점검일자", value:r.date},
+        {label:"이행률", value:`${r.score}% (양호 ${r.goodCount}건 / 점검대상 ${r.targetCount}건)`},
+        {label:"점검 결과", subs: items.map(i => `${i.cat} · ${i.name} : ${i.result}${i.result === "미흡" && i.note ? " (특이사항: " + i.note + ")" : ""}`)},
+        {label:"미흡 사항", value:`${r.badCount}건`}, {label:"점검자", value:r.createdByName || "-"}
+      ], items.map((i, idx) => ({label:`${i.name} (${i.result})`, photos: ph.filter(p => p.itemIdx === idx)})));
+    } else {
+      const a = S.ca.find(x => x.id === id), before = await beforePhotos(a), after = a.status === "done" ? await loadPhotos(`nm_actions/${id}/photos`) : [];
+      showDoc("시정조치 결과서", [
+        {label:"현장", value:a.site}, {label:"구분", value:a.src === "nm" ? "아차사고" : "현장순회점검"}, {label:"지적사항", value:a.issue},
+        {label:"등록일", value:fmtLocal(a.createdAt)},
+        {label:"조치내용", value:a.status === "done" ? (a.doneNote || "-") : "조치 미완료"},
+        {label:"처리 상태", value:a.status === "done" ? "완료" : "대기 (경과 " + (daysSince(a.createdAt) === 0 ? "신규" : "D+" + daysSince(a.createdAt) + "일") + ")"}
+      ], [{label:"조치 전 사진", photos:before}, {label:"조치 후 사진", photos:after}]);
+    }
+  }catch(e){ onErr(e); alert("출력할 자료를 불러오지 못했습니다."); }
+}
+
+async function completeAction(a, host){
+  const dr = S.drafts[a.id]; if(!dr) return;
+  if(dr._picker && dr._picker.isBusy()){ alert("사진을 처리하는 중입니다. 잠시 후 다시 눌러 주세요."); return; }
+  if(!dr.store.length){ alert("조치 후 사진을 1장 이상 첨부해 주세요."); return; }
+  const btn = host.querySelector("[data-act=done]"); btn.disabled = true; btn.textContent = "저장 중…";
+  try{
+    const now = iso(), ref = db.collection("nm_actions").doc(a.id);
+    await Promise.all(dr.store.map(data => ref.collection("photos").add({kind:"after", data, createdAt: now})));
+    await ref.update({status:"done", doneNote: dr.note.trim(), doneAt: now, doneBy: S.user.uid, doneByName: S.name, afterCount: dr.store.length});
+    photoCache.delete(`nm_actions/${a.id}/photos`); delete S.drafts[a.id];
+  }catch(e){ onErr(e); alert("저장하지 못했습니다. 잠시 후 다시 시도해 주세요."); btn.disabled = false; btn.textContent = "완료 등록"; }
+}
+async function reopenAction(a){
+  if(!confirm("이 시정조치를 다시 '대기' 상태로 되돌릴까요? 조치 후 사진과 조치 내용은 삭제됩니다.")) return;
+  try{
+    await delPhotos(`nm_actions/${a.id}/photos`);
+    await db.collection("nm_actions").doc(a.id).update({status:"open", doneNote:"", doneAt:null, doneBy:null, doneByName:"", afterCount:0});
+  }catch(e){ onErr(e); alert("처리하지 못했습니다."); }
+}
+async function deleteRecord(kind, id){
+  if(!confirm("이 기록과 연결된 사진·시정조치가 모두 삭제됩니다. 삭제할까요?")) return;
+  try{
+    const acts = S.ca.filter(a => a.src === kind && a.srcId === id);
+    for(const a of acts){ await delPhotos(`nm_actions/${a.id}/photos`); await db.collection("nm_actions").doc(a.id).delete(); }
+    const col = kind === "nm" ? "nm_reports" : "nm_patrols";
+    await delPhotos(`${col}/${id}/photos`);
+    await db.collection(col).doc(id).delete();
+    S.open.delete(kind + ":" + id);
+  }catch(e){ onErr(e); alert("삭제하지 못했습니다."); }
+}
+
+function wireList(id, render){
+  $(id).addEventListener("click", e => {
+    const btn = e.target.closest("[data-act]"); if(!btn) return;
+    const rec = btn.closest(".rec"), k = rec.dataset.k, [kind, rid] = k.split(":");
+    const act = btn.dataset.act;
+    if(act === "toggle"){ S.open.has(k) ? S.open.delete(k) : S.open.add(k); render(); }
+    else if(act === "print") doPrint(kind, rid);
+    else if(act === "del") deleteRecord(kind, rid);
+    else if(act === "done") completeAction(S.ca.find(x => x.id === rid), btn.closest("[data-form]"));
+    else if(act === "reopen") reopenAction(S.ca.find(x => x.id === rid));
+  });
+}
+wireList("nmList", renderNm); wireList("ptList", renderPt); wireList("caList", renderCa);
+
+/* ---------------- 탭 · 시작 ---------------- */
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-v]"); if(!b) return;
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + b.dataset.v));
+});
+
+function renderAll(){ fillSites(); renderNm(); renderPt(); renderCa(); }
+
+async function init(){
+  if(!SA || !SA.configured() || !SA.boot()){ banner("Firebase 설정이 없어 이 도구를 사용할 수 없습니다. (firebase-config.js 확인)"); return; }
+  const user = await new Promise(res => { const off = SA.auth.onAuthStateChanged(u => { off(); res(u); }); });
+  if(!user) return;   // 로그인 안내 화면은 auth.js 가 표시
+  let prof = {};
+  try{ const s = await SA.db.collection("users").doc(user.uid).get(); prof = s.exists ? s.data() : {}; }catch(e){}
+  S.user = user; S.role = prof.role || "pending"; S.lv = SA.level(S.role, "nm");
+  S.name = prof.name || user.displayName || (user.email || "").split("@")[0];
+  if(!S.lv) return;   // 권한 없음 안내는 auth.js 가 표시
+  db = SA.db;
+
+  $("roleBadge").textContent = (SA.ROLE_LABELS[S.role] || "") + (S.lv === "read" ? " · 조회 전용" : "");
+  if(!canWrite()){ $("nmFormCard").style.display = "none"; $("ptFormCard").style.display = "none"; }
+  else{
+    $("nmTime").value = nowInput(); $("ptDate").value = nowInput().slice(0, 10);
+    nmPicker = makePicker($("nmPk"), nmStore, MAX_PHOTOS);
+  }
+
+  db.collection("siteRegistry").orderBy("order").onSnapshot(s => { S.sites = s.docs.map(d => d.data().name).filter(Boolean); renderAll(); }, onErr);
+  const sub = (col, key) => db.collection(col).orderBy("createdAt", "desc").limit(300).onSnapshot(s => { S[key] = s.docs.map(d => ({id:d.id, ...d.data()})); banner(""); renderAll(); }, onErr);
+  sub("nm_reports", "nm"); sub("nm_patrols", "pt"); sub("nm_actions", "ca");
+}
+init();
+})();
+</script>
+</body>
+</html>
