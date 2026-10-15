@@ -224,6 +224,9 @@
 
 const SA = window.SafetyAuth;
 const $ = id => document.getElementById(id);
+if(window.self !== window.top){ const bk = document.querySelector(".bar .back"); if(bk) bk.style.display = "none"; }
+const PREF_SITE = new URLSearchParams(location.search).get("site") || "";   // 허브에서 선택한 현장
+const prefApplied = {};
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pad = n => String(n).padStart(2, "0");
 const iso = () => new Date().toISOString();
@@ -397,6 +400,11 @@ function fillSites(){
   fillSelect($("ptSite"), reg, {emptyLabel: empty});
   const all = Array.from(new Set([...reg, ...siteNamesInRecords()]));
   ["nmFSite","ptFSite","caFSite"].forEach(id => fillSelect($(id), all, {all:true}));
+  if(PREF_SITE) ["nmSite","ptSite","nmFSite","ptFSite","caFSite"].forEach(id => {
+    if(prefApplied[id]) return;
+    const el = $(id);
+    if(Array.from(el.options).some(o => o.value === PREF_SITE)){ el.value = PREF_SITE; prefApplied[id] = true; }
+  });
 }
 
 /* ---------------- 상태 계산 ---------------- */
@@ -664,6 +672,8 @@ $("tabs").addEventListener("click", e => {
   document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + b.dataset.v));
 });
+
+{ const h = location.hash.slice(1); const tb = document.querySelector('#tabs button[data-v="' + h + '"]'); if(tb) tb.click(); }
 
 function renderAll(){ fillSites(); renderNm(); renderPt(); renderCa(); }
 
