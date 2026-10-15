@@ -335,47 +335,48 @@ const $ = id => document.getElementById(id);
        home:true            → 대시보드 화면
        url:"tools/○○.html"  → 해당 도구를 화면 안에 열기 (hash:"탭이름" 으로 처음 열 탭 지정 가능)
        (url 없음)           → '준비 중' 화면 — 도구가 만들어지면 url 한 줄만 추가하면 됩니다
-   · key : auth.js 의 도구 키(hq/dr/ra/nm). 지정하면 그 도구를 볼 수 있는 등급에게만 메뉴가 보입니다.
-           key 가 없는 항목('준비 중')은 승인된 모든 사용자에게 보입니다.
+   · key : auth.js 의 도구 키(hq/dr/ra/nm/dev). 지정하면 그 키를 볼 수 있는 등급에게만 메뉴가 보입니다.
+           dev = 개발 중 화면(대시보드·현장 화면·'준비 중' 메뉴) — 지금은 관리자에게만 열려 있습니다.
+           공개할 때는 메뉴 항목의 key:"dev" 를 지우거나, auth.js 의 dev 권한을 열어 주세요.
    ========================================================================== */
 const MODES = {
   site: {
     label: "현장", title: "현장 안전 대시보드", icon: "hardhat",
     groups: [
       { label: "", items: [
-        { id:"site.home", title:"대시보드", icon:"dash", home:true } ] },
+        { id:"site.home", title:"대시보드", icon:"dash", home:true, key:"dev" } ] },
       { label: "안전점검", items: [
         { id:"site.patrol", title:"현장순회점검", icon:"check",  key:"nm", url:"tools/near-miss.html", hash:"pt" },
         { id:"site.nm",     title:"아차사고 신고",  icon:"alert",  key:"nm", url:"tools/near-miss.html", hash:"nm" },
         { id:"site.ca",     title:"시정조치",       icon:"clip",   key:"nm", url:"tools/near-miss.html", hash:"ca" } ] },
       { label: "작업관리", items: [
-        { id:"site.permit", title:"작업허가서", icon:"filecheck" },
-        { id:"site.tbm",    title:"TBM 일지",   icon:"chat" } ] },
+        { id:"site.permit", title:"작업허가서", icon:"filecheck", key:"dev" },
+        { id:"site.tbm",    title:"TBM 일지",   icon:"chat", key:"dev" } ] },
       { label: "교육·인원", items: [
-        { id:"site.edu",    title:"안전교육 일지", icon:"cap" },
-        { id:"site.access", title:"근로자 출입등록", icon:"idcard" } ] },
+        { id:"site.edu",    title:"안전교육 일지", icon:"cap", key:"dev" },
+        { id:"site.access", title:"근로자 출입등록", icon:"idcard", key:"dev" } ] },
       { label: "위험성평가", items: [
-        { id:"site.ra", title:"현장 위험성평가", icon:"shield" } ] },
+        { id:"site.ra", title:"현장 위험성평가", icon:"shield", key:"dev" } ] },
       { label: "서류", items: [
-        { id:"site.docs", title:"현장 서류함", icon:"folder" } ] }
+        { id:"site.docs", title:"현장 서류함", icon:"folder", key:"dev" } ] }
     ]
   },
   hq: {
     label: "본사", title: "본사 안전 대시보드", icon: "building",
     groups: [
       { label: "", items: [
-        { id:"hq.home", title:"대시보드", icon:"dash", home:true } ] },
+        { id:"hq.home", title:"대시보드", icon:"dash", home:true, key:"dev" } ] },
       { label: "현장 관리", items: [
-        { id:"hq.sites",   title:"현장 등록·현황", icon:"building" },
-        { id:"hq.compare", title:"현장 비교",      icon:"chart" } ] },
+        { id:"hq.sites",   title:"현장 등록·현황", icon:"building", key:"dev" },
+        { id:"hq.compare", title:"현장 비교",      icon:"chart", key:"dev" } ] },
       { label: "점검·심사", items: [
         { id:"hq.report", title:"본사점검 보고서 관리",      icon:"file",  key:"hq", url:"tools/hq-report.html" },
         { id:"hq.review", title:"중대재해 이행점검 서류심사", icon:"shield", key:"dr", url:"tools/disaster-review.html" } ] },
       { label: "위험성평가", items: [
         { id:"hq.ra", title:"위험성평가 관리", icon:"alert", key:"ra", url:"tools/risk-assessment.html" } ] },
       { label: "법무·거버넌스", items: [
-        { id:"hq.legal", title:"법률자문 미팅일지",     icon:"book" },
-        { id:"hq.gov",   title:"안전보건 관리체계 문서", icon:"folder" } ] }
+        { id:"hq.legal", title:"법률자문 미팅일지",     icon:"book", key:"dev" },
+        { id:"hq.gov",   title:"안전보건 관리체계 문서", icon:"folder", key:"dev" } ] }
     ]
   }
 };
@@ -470,6 +471,10 @@ function visibleGroups(mode){
 function modeAvailable(mode){
   return visibleGroups(mode).some(g => g.items.some(it => !it.home));
 }
+function firstVisibleItem(mode){
+  for(const g of MODES[mode].groups) for(const it of g.items) if(itemVisible(it)) return it.id;
+  return null;
+}
 function findItem(id){
   for(const m of Object.keys(MODES)) for(const g of MODES[m].groups) for(const it of g.items) if(it.id === id) return { mode:m, item:it };
   return null;
@@ -500,7 +505,7 @@ function renderSide(){
   let live = 0, soon = 0;
   Object.keys(MODES).forEach(m => visibleGroups(m).forEach(g => g.items.forEach(it => { if(it.url) live++; else if(!it.home) soon++; })));
   $("count").textContent = live;
-  $("countTxt").textContent = "개 도구 연결됨 · 준비 중 " + soon + "개 · 하나씩 추가됩니다";
+  $("countTxt").textContent = soon ? "개 도구 연결됨 · 준비 중 " + soon + "개 · 하나씩 추가됩니다" : "개 도구 연결됨";
 }
 
 /* ---------- 화면 전환 ---------- */
@@ -509,6 +514,7 @@ function hideViews(){ $("viewDash").hidden = true; $("viewSoon").hidden = true; 
 function selectItem(id){
   const f = findItem(id); if(!f) return;
   const { mode, item } = f;
+  if(!itemVisible(item)) return;                    // 이 등급에게 열려 있지 않은 메뉴는 열지 않음
   if(mode !== state.mode){ state.mode = mode; }
   state.itemId = id; saveUi();
   closeDrawer();
@@ -546,7 +552,8 @@ function setMode(mode){
   if(mode === state.mode) return;
   const wasOpen = drawerOpen;                       // 모바일: 구분을 바꿔도 메뉴 서랍은 열어 두어 바로 항목을 고를 수 있게 함
   state.mode = mode; saveUi();
-  selectItem(MODES[mode].groups[0].items[0].id);   // 구분을 바꾸면 그 구분의 대시보드로
+  const first = firstVisibleItem(mode);            // 구분을 바꾸면 그 구분에서 처음 보이는 화면으로
+  if(first) selectItem(first);
   if(wasOpen){ drawerOpen = true; $("app").classList.add("drawer"); }
 }
 
@@ -622,7 +629,14 @@ function startShell(role){
   let mode = ui.mode && avail.includes(ui.mode) ? ui.mode : (role === "hq" || role === "admin" ? "hq" : "site");
   if(!avail.includes(mode)) mode = avail[0] || "site";
   state.mode = mode;
-  selectItem(MODES[mode].groups[0].items[0].id);
+  const first = firstVisibleItem(mode);
+  if(first){ selectItem(first); }
+  else{
+    hideViews(); renderSide();
+    $("tbTitle").textContent = "안전관리 툴박스";
+    $("viewSoon").innerHTML = `<div class="soon-card"><h3>이용할 수 있는 메뉴가 없습니다</h3><p>현재 등급으로 열려 있는 도구가 없습니다.<br>관리자에게 문의해 주세요.</p></div>`;
+    $("viewSoon").hidden = false;
+  }
 }
 
 /* ==========================================================================
@@ -766,7 +780,7 @@ function route(user){
   if(!shellStarted){
     shellStarted = true;
     startShell(profile.role);
-    watchSites();
+    if(modeAvailable("site")) watchSites();
   }
 }
 

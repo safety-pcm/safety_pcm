@@ -3,7 +3,7 @@
    -----------------------------------------------------------------------------
    · 등급: 관리자(admin) / 본사담당자(hq) / 현장담당자(field) / 열람자(reader)
      (가입 직후에는 '승인 대기(pending)' 상태이며 관리자가 등급을 지정해야 사용 가능)
-   · 도구 키: hq = 본사점검 보고서 관리, dr = 중대재해 이행점검 서류심사, ra = 위험성평가 관리, nm = 아차사고·현장순회점검
+   · 도구 키: hq = 본사점검 보고서 관리, dr = 중대재해 이행점검 서류심사, ra = 위험성평가 관리, nm = 아차사고·현장순회점검, dev = 개발 중 화면
    · 권한 표를 바꾸려면 아래 PERMS 만 수정하면 화면 쪽이 모두 따라갑니다.
      (단, 실제 데이터 보호는 Firebase Firestore 규칙이 담당하므로 규칙도 같이 맞춰야 합니다.)
    ============================================================================= */
@@ -14,12 +14,17 @@
   var ROLE_ORDER  = ["pending","reader","field","hq","admin"];
 
   // 권한 등급: null(접근 불가) < read(조회) < write(작성·수정) < delete(삭제 포함)
+  // [개발 중 공개 범위]  nm = 아차사고·현장순회점검 도구,  dev = 현장 화면·대시보드·'준비 중' 메뉴
+  //   지금은 관리자에게만 열려 있고, 다른 등급에게는 hq(본사점검 보고서 관리)·dr(중대재해 이행점검 서류심사)만 보입니다.
+  //   공개할 때는 아래 nm / dev 값을 바꾸면 됩니다.
+  //     nm  공개용 값 →  hq:"write"  field:"write"  reader:"read"
+  //     dev 공개용 값 →  원하는 등급에 "read" 를 넣으면 대시보드·준비 중 메뉴가 보입니다.
   var PERMS = {
-    admin:   { hq:"delete", dr:"delete", ra:"delete", nm:"delete" },
-    hq:      { hq:"write",  dr:"write",  ra:null,     nm:"write"  },
-    field:   { hq:"read",   dr:null,     ra:null,     nm:"write"  },
-    reader:  { hq:"read",   dr:"read",   ra:null,     nm:"read"   },
-    pending: { hq:null,     dr:null,     ra:null,     nm:null     }
+    admin:   { hq:"delete", dr:"delete", ra:"delete", nm:"delete", dev:"delete" },
+    hq:      { hq:"write",  dr:"write",  ra:null,     nm:null,     dev:null     },
+    field:   { hq:"read",   dr:null,     ra:null,     nm:null,     dev:null     },
+    reader:  { hq:"read",   dr:"read",   ra:null,     nm:null,     dev:null     },
+    pending: { hq:null,     dr:null,     ra:null,     nm:null,     dev:null     }
   };
   var RANK = { read:1, write:2, delete:3 };
 
