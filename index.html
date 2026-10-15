@@ -47,68 +47,72 @@ body{
 .mono{ font-family:'IBM Plex Mono','Noto Sans KR',monospace; font-variant-numeric:tabular-nums; }
 button{ font-family:inherit; }
 
-.app{ display:flex; height:100vh; }
+
+.app{ display:flex; height:100vh; height:100dvh; }
 
 /* ---------- sidebar ---------- */
 .sidebar{
-  width:var(--sidebar-w); flex:0 0 auto; height:100vh; overflow-y:auto;
+  width:var(--sidebar-w); flex:0 0 auto; height:100%; overflow-y:auto;
   background:var(--surface-2); border-right:1px solid var(--line);
   display:flex; flex-direction:column;
 }
-.brand{ padding:20px 20px 14px; }
+.brand{ padding:18px 18px 12px; }
 .eyebrow{
-  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  display:flex; align-items:center; gap:8px; margin-bottom:9px;
   font-size:11.5px; font-weight:600; color:var(--ink-faint); letter-spacing:.05em;
 }
 .eyebrow .sq{ width:6px; height:6px; background:var(--hazard); flex:0 0 auto; transform:rotate(45deg); }
-.brand h1{
-  font-family:'Noto Serif KR',serif; font-weight:700; font-size:18px; margin:0;
-  letter-spacing:-.01em;
+.brand h1{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:18px; margin:0; letter-spacing:-.01em; }
+
+.modebox{ padding:4px 14px 8px; }
+.mode-seg{ display:flex; gap:4px; background:var(--surface-3); padding:3px; border-radius:10px; }
+.mode-btn{
+  flex:1; display:flex; align-items:center; justify-content:center; gap:7px; border:0; background:none;
+  padding:9px 8px; border-radius:8px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer;
 }
-.nav{ flex:1; padding:6px 12px; display:flex; flex-direction:column; gap:4px; }
+.mode-btn svg{ width:16px; height:16px; }
+.mode-btn.on{ background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.12); }
+.mode-btn.on[data-mode="site"] svg{ color:var(--accent); }
+.mode-btn.on[data-mode="hq"] svg{ color:var(--hazard); }
+.sitebox{ margin-top:10px; }
+.sitebox label{ display:block; font-size:11px; font-weight:600; color:var(--ink-faint); margin:0 2px 4px; letter-spacing:.03em; }
+.sitebox select{
+  width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:9px;
+  background:var(--surface); color:var(--ink); font:inherit; font-size:13px; font-weight:600;
+}
+.sitebox .all{ font-size:12px; color:var(--ink-soft); padding:9px 10px; border:1px dashed var(--line); border-radius:9px; line-height:1.5; }
+
+.nav{ flex:1; padding:2px 10px 10px; }
+.nav-group{ margin-top:12px; }
+.nav-group:first-child{ margin-top:6px; }
+.nav-group-label{ padding:0 10px 4px; font-size:11px; font-weight:700; color:var(--ink-faint); letter-spacing:.04em; }
 .nav-item{
-  display:flex; align-items:flex-start; gap:11px; width:100%; text-align:left;
-  padding:11px 12px; border:1px solid transparent; border-radius:10px;
-  background:none; color:var(--ink); cursor:pointer;
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:9px 10px;
+  border:1px solid transparent; border-radius:9px; background:none; color:var(--ink); cursor:pointer;
+  font-size:13.3px; font-weight:600;
 }
+.nav-item svg{ width:18px; height:18px; flex:0 0 auto; color:var(--ink-soft); }
 .nav-item:hover{ background:var(--surface-3); }
 .nav-item.active{ background:var(--surface); border-color:var(--line); box-shadow:var(--shadow); }
-.nav-item.active .nav-icon{ background:var(--item-accent-soft, var(--accent-soft)); }
-.nav-icon{
-  width:32px; height:32px; border-radius:8px; flex:0 0 auto; font-size:15px;
-  display:flex; align-items:center; justify-content:center; background:var(--surface-3);
-}
-.nav-text{ min-width:0; }
-.nav-title{ font-size:13.3px; font-weight:700; line-height:1.35; }
-.nav-tag{
-  display:block; margin-top:3px; font-size:10.5px; font-weight:600; letter-spacing:.03em;
-  color:var(--item-accent, var(--accent));
-}
-.nav-slot{
-  display:flex; align-items:center; gap:11px; padding:11px 12px; margin-top:2px;
-  border:1.5px dashed var(--line); border-radius:10px; color:var(--ink-faint);
-}
-.nav-slot .nav-icon{ background:transparent; border:1.5px dashed var(--line); font-size:14px; }
-.nav-slot .nav-title{ font-size:12px; font-weight:600; }
-.nav-slot .nav-tag{ color:var(--ink-faint); font-weight:500; }
-
-.sidebar-foot{
-  padding:12px 20px 18px; border-top:1px solid var(--line-soft);
-  font-size:11px; color:var(--ink-faint); line-height:1.6;
-}
+.nav-item.active svg{ color:var(--accent); }
+.nav-item .t{ flex:1; min-width:0; }
+.nav-item .soon{ font-size:10px; font-weight:600; color:var(--ink-faint); border:1px solid var(--line); border-radius:999px; padding:0 6px; line-height:16px; white-space:nowrap; }
+.nav-item:focus-visible, .mode-btn:focus-visible, .w-more:focus-visible, .hamb:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+.sidebar-foot{ padding:12px 18px 16px; border-top:1px solid var(--line-soft); font-size:11px; color:var(--ink-faint); line-height:1.6; }
 .sidebar-foot .count{ color:var(--ink-soft); font-weight:700; }
 
 /* ---------- main ---------- */
-.main{ flex:1; min-width:0; height:100vh; display:flex; flex-direction:column; }
+.main{ flex:1; min-width:0; height:100%; display:flex; flex-direction:column; }
 .topbar{
   height:var(--topbar-h); flex:0 0 auto; display:flex; align-items:center; gap:12px;
   padding:0 18px; border-bottom:1px solid var(--line); background:var(--surface);
 }
+.hamb{ display:none; width:34px; height:34px; align-items:center; justify-content:center; border:1px solid var(--line); background:var(--surface-2); color:var(--ink); border-radius:8px; cursor:pointer; flex:0 0 auto; }
+.hamb svg{ width:18px; height:18px; }
 .tb-title{ font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tb-tag{
-  font-size:10.5px; font-weight:600; letter-spacing:.03em; padding:2px 9px; border-radius:999px;
-  color:var(--cur-accent, var(--accent)); background:var(--cur-accent-soft, var(--accent-soft));
-  white-space:nowrap;
+  font-size:10.5px; font-weight:700; letter-spacing:.03em; padding:2px 9px; border-radius:999px;
+  color:var(--cur-accent, var(--accent)); background:var(--cur-accent-soft, var(--accent-soft)); white-space:nowrap;
 }
 .tb-spacer{ flex:1; }
 .tb-open{
@@ -117,23 +121,22 @@ button{ font-family:inherit; }
   border-radius:8px; padding:7px 12px; white-space:nowrap; text-decoration:none;
 }
 .tb-open:hover{ color:var(--accent); border-color:var(--accent); }
+.tb-open[hidden]{ display:none; }
 
-.viewport{ position:relative; flex:1; min-height:0; background:var(--surface-3); }
+.viewport{ position:relative; flex:1; min-height:0; background:var(--paper); }
 .viewport iframe{ width:100%; height:100%; border:0; display:block; background:var(--surface); }
+.viewport iframe[hidden]{ display:none; }
+.view-dash, .view-soon{ position:absolute; inset:0; overflow:auto; padding:18px 20px 28px; }
+.view-dash[hidden], .view-soon[hidden]{ display:none; }
 
 .loading{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  gap:10px; color:var(--ink-faint); font-size:12.8px; background:var(--surface-3);
-  transition:opacity .2s;
+  gap:10px; color:var(--ink-faint); font-size:12.8px; background:var(--surface-3); transition:opacity .2s;
 }
-.loading .spin{
-  width:16px; height:16px; border-radius:50%; border:2px solid var(--line);
-  border-top-color:var(--accent); animation:spin .8s linear infinite;
-}
+.loading .spin{ width:16px; height:16px; border-radius:50%; border:2px solid var(--line); border-top-color:var(--accent); animation:spin .8s linear infinite; }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 .loading.hide{ opacity:0; pointer-events:none; }
 
-/* ---------- setup banner (firebase-config not filled in yet) ---------- */
 .setup-banner{
   display:none; align-items:flex-start; gap:10px; margin:14px 16px 0;
   background:var(--warn-soft); border:1px solid var(--warn); color:var(--ink);
@@ -142,23 +145,75 @@ button{ font-family:inherit; }
 .setup-banner.show{ display:flex; }
 .setup-banner b{ color:var(--warn); }
 
-/* ---------- mobile ---------- */
-@media (max-width:760px){
-  .app{ flex-direction:column; }
+/* ---------- 대시보드 ---------- */
+.dash-head{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.dash-head h2{ margin:0; font-size:19px; font-family:'Noto Serif KR',serif; letter-spacing:-.01em; }
+.dash-head .sub{ font-size:12.5px; color:var(--ink-soft); }
+.dash{ display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:14px; align-items:start; }
+.dash-main{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.dash-rail{ display:flex; flex-direction:column; gap:14px; }
+.w{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px 16px; min-height:150px; display:flex; flex-direction:column; }
+.w.span2{ grid-column:span 2; }
+.w-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.w-title{ font-size:13.5px; font-weight:700; }
+.w-more{ border:0; background:none; font-size:11.5px; color:var(--ink-faint); cursor:pointer; padding:0; }
+.w-more:hover{ color:var(--accent); }
+.w-body{ flex:1; min-width:0; }
+.w-empty{ display:flex; flex-direction:column; gap:12px; }
+.w-hint{ font-size:11.5px; color:var(--ink-faint); line-height:1.55; }
+.chip-pre{ display:inline-block; margin-right:4px; font-size:10px; font-weight:600; color:var(--ink-faint); border:1px dashed var(--line); border-radius:999px; padding:0 7px; line-height:16px; }
+
+.sk{ background:var(--surface-3); border-radius:5px; display:block; }
+.sk-row{ display:flex; align-items:center; gap:10px; padding:6px 0; }
+.sk-dot{ width:22px; height:22px; border-radius:50%; flex:0 0 auto; }
+.sk-col{ flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.sk-l{ height:9px; }
+.sk-ringrow{ display:flex; align-items:center; gap:16px; }
+.sk-ringrow svg{ flex:0 0 auto; }
+.sk-bars{ display:flex; align-items:flex-end; gap:9px; height:96px; padding-top:4px; }
+.sk-bars .sk{ flex:1; border-radius:4px 4px 0 0; }
+.sk-hrow{ display:flex; align-items:center; gap:10px; padding:5px 0; }
+.sk-hrow .lab{ width:54px; height:8px; flex:0 0 auto; }
+.sk-hrow .trk{ flex:1; height:10px; background:var(--surface-3); border-radius:5px; overflow:hidden; }
+.sk-hrow .trk i{ display:block; height:100%; background:var(--line); border-radius:5px; }
+.sk-table .th, .sk-table .tr{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:14px; align-items:center; padding:9px 0; }
+.sk-table .th .sk{ height:8px; opacity:.7; }
+.sk-table .tr{ border-top:1px solid var(--line-soft); }
+.sk-table .tr .sk{ height:9px; }
+.sk-line svg{ display:block; width:100%; height:96px; }
+.sk-sched .sk-row .pill{ width:38px; height:16px; border-radius:999px; flex:0 0 auto; }
+
+@media (max-width:1100px){
+  .dash{ grid-template-columns:1fr; }
+  .dash-rail{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); }
+}
+@media (max-width:640px){
+  .dash-main{ grid-template-columns:1fr; }
+  .w.span2{ grid-column:auto; }
+}
+
+/* ---------- 준비 중 화면 ---------- */
+.soon-card{ max-width:520px; margin:40px auto; background:var(--surface); border:1px dashed var(--line); border-radius:14px; padding:30px 26px; text-align:center; }
+.soon-card .ic{ width:44px; height:44px; margin:0 auto 12px; border-radius:12px; background:var(--surface-3); display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
+.soon-card .ic svg{ width:22px; height:22px; }
+.soon-card h3{ margin:0 0 6px; font-size:16px; }
+.soon-card p{ margin:0; font-size:12.8px; color:var(--ink-soft); line-height:1.7; }
+.soon-card code{ font-size:11.5px; background:var(--surface-3); padding:1px 6px; border-radius:5px; }
+
+/* ---------- 모바일: 왼쪽 메뉴를 서랍으로 ---------- */
+.scrim{ display:none; }
+@media (max-width:900px){
+  .hamb{ display:inline-flex; }
   .sidebar{
-    width:100%; height:auto; max-height:none; border-right:none; border-bottom:1px solid var(--line);
-    flex-direction:row; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; align-items:center;
+    position:fixed; z-index:60; left:0; top:0; bottom:0; height:auto; width:min(300px,86vw);
+    transform:translateX(-104%); transition:transform .22s ease; box-shadow:var(--shadow);
   }
-  .brand{ display:none; }
-  .nav{ flex-direction:row; padding:10px 12px; gap:8px; flex:none; }
-  .nav-item{ flex:0 0 auto; width:auto; flex-direction:row; padding:8px 12px; }
-  .nav-text{ display:flex; flex-direction:column; }
-  .nav-slot{ flex:0 0 auto; margin-top:0; }
-  .sidebar-foot{ display:none; }
-  .main{ height:auto; flex:1; min-height:0; }
+  .app.drawer .sidebar{ transform:none; }
+  .app.drawer .scrim{ display:block; position:fixed; inset:0; z-index:55; background:rgba(10,15,20,.45); }
   .tb-tag{ display:none; }
 }
-@media (prefers-reduced-motion:reduce){ .loading .spin{ animation:none } }
+@media (max-width:640px){ .tb-user{ display:none; } .topbar{ padding:0 12px; gap:8px; } }
+@media (prefers-reduced-motion:reduce){ .loading .spin{ animation:none } .sidebar{ transition:none } }
 
 /* ---------- login / gate ---------- */
 .gate{ position:fixed; inset:0; z-index:100; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
@@ -214,30 +269,38 @@ button{ font-family:inherit; }
 </style>
 </head>
 <body>
-<div class="app">
-  <aside class="sidebar">
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="eyebrow"><span class="sq"></span>대라수건설(주) 안전보건경영실</div>
       <h1>안전관리 툴박스</h1>
     </div>
+    <div class="modebox" id="modeBox">
+      <div class="mode-seg" id="modeSeg" role="tablist" aria-label="관리 구분"></div>
+      <div class="sitebox" id="siteBox"></div>
+    </div>
     <nav class="nav" id="nav"></nav>
-    <div class="sidebar-foot"><span class="count mono" id="count"></span>개 도구 연결됨 · 새 도구가 만들어지면 계속 추가됩니다</div>
+    <div class="sidebar-foot"><span class="count mono" id="count"></span><span id="countTxt"></span></div>
   </aside>
+  <div class="scrim" id="scrim"></div>
 
   <main class="main">
     <div class="topbar">
+      <button class="hamb" id="hamb" type="button" aria-label="메뉴 열기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <span class="tb-title" id="tbTitle"></span>
       <span class="tb-tag" id="tbTag"></span>
       <span class="tb-spacer"></span>
       <span class="tb-user" id="tbUser" hidden><span class="who"><b id="uName"></b></span><span class="role-badge" id="uRole"></span></span>
       <button class="tb-btn" id="btnUsers" type="button" hidden>사용자 관리<span class="dot" id="pendDot" hidden></span></button>
       <button class="tb-btn" id="btnLogout" type="button" hidden>로그아웃</button>
-      <a class="tb-open" id="tbOpen" target="_blank" rel="noopener">새 탭에서 열기 ↗</a>
+      <a class="tb-open" id="tbOpen" target="_blank" rel="noopener" hidden>새 탭에서 열기 ↗</a>
     </div>
     <div class="setup-banner" id="setupBanner"><span>⚠️</span><span><b>Firebase 설정이 아직 비어 있습니다.</b> 지금은 저장 없이 미리보기만 가능합니다. <code>firebase-config.js</code> 파일에 본인의 Firebase 프로젝트 설정값을 채워 넣으면 보고서·점검 점수가 실제로 저장되고 기기 간에 동기화됩니다. (배포 가이드 문서 참고)</span></div>
     <div class="viewport">
-      <iframe id="frame" title="선택한 도구 미리보기" allow="camera; clipboard-read; clipboard-write"></iframe>
-      <div class="loading" id="loading"><span class="spin"></span>불러오는 중…</div>
+      <div class="view-dash" id="viewDash" hidden></div>
+      <div class="view-soon" id="viewSoon" hidden></div>
+      <iframe id="frame" title="선택한 도구" allow="camera; clipboard-read; clipboard-write" hidden></iframe>
+      <div class="loading hide" id="loading"><span class="spin"></span>불러오는 중…</div>
     </div>
   </main>
 </div>
@@ -263,117 +326,308 @@ button{ font-family:inherit; }
 <script src="firebase-config.js"></script>
 <script src="auth.js"></script>
 <script>
+const SA = window.SafetyAuth;
+const $ = id => document.getElementById(id);
 /* ==========================================================================
-   등록된 도구 목록
-   새 도구를 추가하려면: 1) tools/폴더에 새 HTML 파일을 올리고
-   2) 이 배열에 객체 하나만 추가하면 됩니다.
-   accent: 'teal' | 'amber' | 'slate' — 아이콘 · 강조 색상 테마
+   메뉴 구성 — 여기만 고치면 왼쪽 메뉴가 바뀝니다
+   · 현장(site) / 본사(hq) 두 구분으로 나뉘며, 각각 그룹(groups) 안에 항목(items)이 들어갑니다.
+   · 항목 종류
+       home:true            → 대시보드 화면
+       url:"tools/○○.html"  → 해당 도구를 화면 안에 열기 (hash:"탭이름" 으로 처음 열 탭 지정 가능)
+       (url 없음)           → '준비 중' 화면 — 도구가 만들어지면 url 한 줄만 추가하면 됩니다
+   · key : auth.js 의 도구 키(hq/dr/ra/nm). 지정하면 그 도구를 볼 수 있는 등급에게만 메뉴가 보입니다.
+           key 가 없는 항목('준비 중')은 승인된 모든 사용자에게 보입니다.
    ========================================================================== */
-const LINKS = [
-  {
-    title: "본사점검 보고서 관리",
-    tag: "보고서 · 현장점검",
-    key: "hq",
-    url: "tools/hq-report.html",
-    emoji: "🦺",
-    accent: "teal"
+const MODES = {
+  site: {
+    label: "현장", title: "현장 안전 대시보드", icon: "hardhat",
+    groups: [
+      { label: "", items: [
+        { id:"site.home", title:"대시보드", icon:"dash", home:true } ] },
+      { label: "안전점검", items: [
+        { id:"site.patrol", title:"현장순회점검", icon:"check",  key:"nm", url:"tools/near-miss.html", hash:"pt" },
+        { id:"site.nm",     title:"아차사고 신고",  icon:"alert",  key:"nm", url:"tools/near-miss.html", hash:"nm" },
+        { id:"site.ca",     title:"시정조치",       icon:"clip",   key:"nm", url:"tools/near-miss.html", hash:"ca" } ] },
+      { label: "작업관리", items: [
+        { id:"site.permit", title:"작업허가서", icon:"filecheck" },
+        { id:"site.tbm",    title:"TBM 일지",   icon:"chat" } ] },
+      { label: "교육·인원", items: [
+        { id:"site.edu",    title:"안전교육 일지", icon:"cap" },
+        { id:"site.access", title:"근로자 출입등록", icon:"idcard" } ] },
+      { label: "위험성평가", items: [
+        { id:"site.ra", title:"현장 위험성평가", icon:"shield" } ] },
+      { label: "서류", items: [
+        { id:"site.docs", title:"현장 서류함", icon:"folder" } ] }
+    ]
   },
-  {
-    title: "중대재해 이행점검 서류심사",
-    tag: "서류심사 · 이행점검",
-    key: "dr",
-    url: "tools/disaster-review.html",
-    emoji: "🦺",
-    accent: "amber"
-  },
-  {
-    title: "위험성평가 관리",
-    tag: "위험성평가 · PDCA",
-    key: "ra",
-    url: "tools/risk-assessment.html",
-    emoji: "⚠️",
-    accent: "slate"
-  },
-  {
-    title: "아차사고 · 현장순회점검",
-    tag: "아차사고 · 순회점검 · 시정조치",
-    key: "nm",
-    url: "tools/near-miss.html",
-    emoji: "📋",
-    accent: "teal"
-  },
-  {
-    title: "법률자문 미팅일지",
-    tag: "자문일지 · 자문시간 · 조치사항",
-    key: "lg",
-    url: "tools/legal-meeting.html",
-    emoji: "⚖️",
-    accent: "slate"
+  hq: {
+    label: "본사", title: "본사 안전 대시보드", icon: "building",
+    groups: [
+      { label: "", items: [
+        { id:"hq.home", title:"대시보드", icon:"dash", home:true } ] },
+      { label: "현장 관리", items: [
+        { id:"hq.sites",   title:"현장 등록·현황", icon:"building" },
+        { id:"hq.compare", title:"현장 비교",      icon:"chart" } ] },
+      { label: "점검·심사", items: [
+        { id:"hq.report", title:"본사점검 보고서 관리",      icon:"file",  key:"hq", url:"tools/hq-report.html" },
+        { id:"hq.review", title:"중대재해 이행점검 서류심사", icon:"shield", key:"dr", url:"tools/disaster-review.html" } ] },
+      { label: "위험성평가", items: [
+        { id:"hq.ra", title:"위험성평가 관리", icon:"alert", key:"ra", url:"tools/risk-assessment.html" } ] },
+      { label: "법무·거버넌스", items: [
+        { id:"hq.legal", title:"법률자문 미팅일지",     icon:"book" },
+        { id:"hq.gov",   title:"안전보건 관리체계 문서", icon:"folder" } ] }
+    ]
   }
-];
-
-const ACCENTS = {
-  teal:  { c:"var(--accent)", s:"var(--accent-soft)" },
-  amber: { c:"var(--hazard)", s:"var(--hazard-soft)" },
-  slate: { c:"var(--ink-soft)", s:"var(--surface-3)" }
 };
+
+/* ==========================================================================
+   대시보드 칸 구성 — main(왼쪽 큰 영역) / rail(오른쪽 좁은 영역)
+   · 지금은 모양만 있는 빈 칸입니다. 내용을 넣을 때는
+       Toolbox.setWidget("칸id", "<html>")  을 호출하면 그 칸의 빈 모양이 내용으로 바뀝니다.
+   · sk : 빈 칸에 보이는 모양 (list ring bars hbars line donut donutline schedule text table progress)
+   · more : 오른쪽 위 '전체 보기' 링크가 열 메뉴 id (없으면 링크 없음)
+   ========================================================================== */
+const WIDGETS = {
+  site: {
+    main: [
+      { id:"todo",    title:"오늘 해야 할 일", sk:"list",   span:2, hint:"점검·TBM·교육 등 오늘 처리할 항목이 표시됩니다", more:{label:"전체 보기", go:"site.patrol"} },
+      { id:"rate",    title:"이번 달 이행률", sk:"ring",           hint:"점검·교육·TBM 이행률이 표시됩니다" },
+      { id:"tbm",     title:"오늘 협력사 TBM", sk:"hbars",         hint:"협력업체별 TBM 실시 현황이 표시됩니다", more:{label:"더보기", go:"site.tbm"} },
+      { id:"risk",    title:"새로 찾은 위험",  sk:"donutline", span:2, hint:"발굴한 위험요인의 유형 비율과 추이가 표시됩니다", more:{label:"더보기", go:"site.nm"} },
+      { id:"monthly", title:"월별 이행 현황", sk:"bars",    span:2, hint:"월별 점검·교육 이행 건수가 표시됩니다" }
+    ],
+    rail: [
+      { id:"policy",   title:"안전보건 방침·목표", sk:"text",     hint:"우리 현장의 안전보건 방침과 목표가 표시됩니다" },
+      { id:"schedule", title:"정기 활동 일정",     sk:"schedule", hint:"다가오는 정기 점검·교육 일정이 표시됩니다" },
+      { id:"remain",   title:"남은 조치",          sk:"list",     hint:"완료되지 않은 시정조치가 표시됩니다", more:{label:"전체 보기", go:"site.ca"} }
+    ]
+  },
+  hq: {
+    main: [
+      { id:"sites",   title:"전체 현장 현황",   sk:"table",  span:2, hint:"현장별 이행률·미결 조치·최근 점검일이 표시됩니다", more:{label:"현장 비교", go:"hq.compare"} },
+      { id:"compare", title:"현장별 이행률 비교", sk:"hbars",         hint:"현장별 점검 이행률이 표시됩니다" },
+      { id:"open",    title:"미결 시정조치",     sk:"donut",         hint:"현장별 미결 시정조치 비율이 표시됩니다" },
+      { id:"trend",   title:"월별 추이",         sk:"line",     span:2, hint:"아차사고·미흡 건수의 월별 추이가 표시됩니다" }
+    ],
+    rail: [
+      { id:"hqsched", title:"본사 점검 일정",          sk:"schedule", hint:"본사 점검·심사 일정이 표시됩니다" },
+      { id:"review",  title:"중대재해 이행점검 진행",   sk:"progress", hint:"이행점검 서류심사 진행 상황이 표시됩니다", more:{label:"더보기", go:"hq.review"} },
+      { id:"legal",   title:"최근 법률자문 일지",       sk:"list",     hint:"최근 자문 미팅 내용이 표시됩니다", more:{label:"더보기", go:"hq.legal"} }
+    ]
+  }
+};
+
+const ICONS = {
+  dash:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  check:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>',
+  alert:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  clip:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/>',
+  filecheck:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/>',
+  building:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
+  chat:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  cap:'<path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  idcard:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M15 9h3M15 13h3M6 17c.5-2 5.5-2 6 0"/>',
+  folder:'<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
+  book:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  hardhat:'<path d="M3 18h18v2H3z"/><path d="M5 18v-3a7 7 0 0 1 14 0v3"/><path d="M12 8V5M9 9.5 7.5 6M15 9.5 16.5 6"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+};
+function icon(name){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || ICONS.folder) + '</svg>'; }
 
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
-let current = 0;
-let VIS = LINKS.slice();   // 로그인한 사용자의 등급으로 볼 수 있는 도구만 담김
+/* ---------- 빈 칸 모양(스켈레톤) ---------- */
+const SK = {
+  list(){ return [0,1,2,3].map(i=>`<div class="sk-row"><span class="sk sk-dot"></span><span class="sk-col"><span class="sk sk-l" style="width:${[78,64,72,58][i]}%"></span><span class="sk sk-l" style="width:${[40,34,44,30][i]}%;opacity:.7;height:7px"></span></span></div>`).join(""); },
+  ring(){ return `<div class="sk-ringrow">${SK._ring(86)}<span class="sk-col">${[88,64,100].map(w=>`<span class="sk sk-l" style="width:${w}%"></span>`).join("")}</span></div>`; },
+  _ring(sz){ return `<svg viewBox="0 0 90 90" width="${sz}" height="${sz}"><circle cx="45" cy="45" r="36" fill="none" stroke="var(--surface-3)" stroke-width="11"/><circle cx="45" cy="45" r="36" fill="none" stroke="var(--line)" stroke-width="11" stroke-linecap="round" stroke-dasharray="120 226" transform="rotate(-90 45 45)"/></svg>`; },
+  bars(){ return `<div class="sk-bars">${[42,68,54,86,60,76,46,58].map(h=>`<span class="sk" style="height:${h}%"></span>`).join("")}</div>`; },
+  hbars(){ return [82,64,90,48,70].map(w=>`<div class="sk-hrow"><span class="sk lab"></span><span class="trk"><i style="width:${w}%"></i></span></div>`).join(""); },
+  line(){ return `<div class="sk-line"><svg viewBox="0 0 300 96" preserveAspectRatio="none"><path d="M0 90H300M0 60H300M0 30H300" stroke="var(--line-soft)" stroke-width="1" fill="none"/><polyline points="0,70 40,56 80,64 120,34 160,48 200,22 240,40 300,18" fill="none" stroke="var(--line)" stroke-width="2.5" stroke-dasharray="6 5" stroke-linejoin="round"/></svg></div>`; },
+  donut(){ return `<div class="sk-ringrow">${SK._ring(86)}<span class="sk-col">${[70,56,64].map(w=>`<span class="sk sk-l" style="width:${w}%"></span>`).join("")}</span></div>`; },
+  donutline(){ return `<div class="sk-ringrow" style="align-items:stretch">${SK._ring(86)}<div style="flex:1;min-width:0">${SK.line()}</div></div>`; },
+  schedule(){ return `<div class="sk-sched">${[0,1,2,3].map(i=>`<div class="sk-row"><span class="sk pill"></span><span class="sk-col"><span class="sk sk-l" style="width:${[74,60,68,52][i]}%"></span></span></div>`).join("")}</div>`; },
+  text(){ return [96,88,92,60].map(w=>`<span class="sk sk-l" style="width:${w}%;margin:0 0 9px"></span>`).join(""); },
+  table(){ return `<div class="sk-table"><div class="th">${[0,1,2,3].map(()=>`<span class="sk"></span>`).join("")}</div>${[0,1,2,3,4].map(()=>`<div class="tr">${[0,1,2,3].map(()=>`<span class="sk"></span>`).join("")}</div>`).join("")}</div>`; },
+  progress(){ return [90,66,42,78].map(w=>`<div class="sk-hrow" style="padding:7px 0"><span class="sk lab" style="width:72px"></span><span class="trk"><i style="width:${w}%"></i></span></div>`).join(""); }
+};
 
-function renderNav(){
-  const nav = document.getElementById("nav");
-  nav.innerHTML = VIS.map((item,i)=>{
-    const a = ACCENTS[item.accent] || ACCENTS.teal;
-    return `<button class="nav-item${i===current?' active':''}" data-i="${i}" style="--item-accent:${a.c};--item-accent-soft:${a.s}">
-      <span class="nav-icon">${item.emoji}</span>
-      <span class="nav-text">
-        <span class="nav-title">${esc(item.title)}</span>
-        <span class="nav-tag">${esc(item.tag)}</span>
-      </span>
-    </button>`;
-  }).join("") + `<div class="nav-slot">
-      <span class="nav-icon">+</span>
-      <span class="nav-text">
-        <span class="nav-title">다음 도구 추가 예정</span>
-        <span class="nav-tag">새 파일이 생기면 여기에 표시됩니다</span>
-      </span>
-    </div>`;
-  nav.querySelectorAll(".nav-item").forEach(btn=>{
-    btn.addEventListener("click", ()=> selectItem(Number(btn.dataset.i)));
-  });
-  document.getElementById("count").textContent = VIS.length;
+/* ---------- 화면 상태 ---------- */
+const UI_KEY = "toolbox_ui_v1";
+const state = { mode:"site", itemId:"site.home", site:"", sites:[], role:null, widgetHTML:{} };
+let drawerOpen = false;
+
+function loadUi(){ try{ const o = JSON.parse(localStorage.getItem(UI_KEY) || "null"); if(o) return o; }catch(e){} return {}; }
+function saveUi(){ try{ localStorage.setItem(UI_KEY, JSON.stringify({ mode:state.mode, site:state.site })); }catch(e){} }
+
+const itemVisible = it => !it.key || state.role == null || SA.can(state.role, it.key, "read");
+function visibleGroups(mode){
+  return MODES[mode].groups.map(g => ({ label:g.label, items:g.items.filter(itemVisible) })).filter(g => g.items.length);
+}
+function modeAvailable(mode){
+  return visibleGroups(mode).some(g => g.items.some(it => !it.home));
+}
+function findItem(id){
+  for(const m of Object.keys(MODES)) for(const g of MODES[m].groups) for(const it of g.items) if(it.id === id) return { mode:m, item:it };
+  return null;
 }
 
-function selectItem(i){
-  current = i;
-  const item = VIS[i];
-  const a = ACCENTS[item.accent] || ACCENTS.teal;
-  document.getElementById("tbTitle").textContent = item.title;
-  const tag = document.getElementById("tbTag");
-  tag.textContent = item.tag;
-  tag.style.setProperty("--cur-accent", a.c);
-  tag.style.setProperty("--cur-accent-soft", a.s);
-  document.getElementById("tbOpen").href = item.url;
-  const loading = document.getElementById("loading");
-  loading.classList.remove("hide");
-  const frame = document.getElementById("frame");
-  // 캐시 방지: 도구 파일을 고쳐 올리면 허브 화면에도 바로 새 버전이 뜨도록 매번 최신본을 불러옴
-  frame.src = item.url + (item.url.indexOf("?") < 0 ? "?" : "&") + "v=" + Date.now();
-  renderNav();
+/* ---------- 왼쪽 메뉴 ---------- */
+function renderSide(){
+  const avail = Object.keys(MODES).filter(modeAvailable);
+  const seg = $("modeSeg");
+  seg.hidden = avail.length < 2;
+  seg.innerHTML = avail.map(m => `<button type="button" class="mode-btn${m===state.mode?" on":""}" data-mode="${m}" role="tab" aria-selected="${m===state.mode}">${icon(MODES[m].icon)}${esc(MODES[m].label)}</button>`).join("");
+
+  const sb = $("siteBox");
+  if(state.mode === "site"){
+    const opts = state.sites.length
+      ? state.sites.map(n => `<option value="${esc(n)}"${n===state.site?" selected":""}>${esc(n)}</option>`).join("")
+      : `<option value="">(등록된 현장 없음)</option>`;
+    sb.innerHTML = `<label for="siteSel">현장 선택</label><select id="siteSel">${opts}</select>`;
+  } else {
+    sb.innerHTML = `<div class="all">전체 현장을 한 곳에서 관리합니다</div>`;
+  }
+
+  $("nav").innerHTML = visibleGroups(state.mode).map(g => `<div class="nav-group">
+      ${g.label ? `<div class="nav-group-label">${esc(g.label)}</div>` : ""}
+      ${g.items.map(it => `<button type="button" class="nav-item${it.id===state.itemId?" active":""}" data-id="${it.id}">${icon(it.icon)}<span class="t">${esc(it.title)}</span>${(!it.home && !it.url) ? `<span class="soon">준비 중</span>` : ""}</button>`).join("")}
+    </div>`).join("");
+
+  let live = 0, soon = 0;
+  Object.keys(MODES).forEach(m => visibleGroups(m).forEach(g => g.items.forEach(it => { if(it.url) live++; else if(!it.home) soon++; })));
+  $("count").textContent = live;
+  $("countTxt").textContent = "개 도구 연결됨 · 준비 중 " + soon + "개 · 하나씩 추가됩니다";
 }
 
-document.getElementById("frame").addEventListener("load", ()=>{
-  document.getElementById("loading").classList.add("hide");
+/* ---------- 화면 전환 ---------- */
+function hideViews(){ $("viewDash").hidden = true; $("viewSoon").hidden = true; $("frame").hidden = true; $("tbOpen").hidden = true; $("loading").classList.add("hide"); }
+
+function selectItem(id){
+  const f = findItem(id); if(!f) return;
+  const { mode, item } = f;
+  if(mode !== state.mode){ state.mode = mode; }
+  state.itemId = id; saveUi();
+  closeDrawer();
+  hideViews();
+
+  const tag = $("tbTag");
+  const acc = mode === "hq" ? { c:"var(--hazard)", s:"var(--hazard-soft)" } : { c:"var(--accent)", s:"var(--accent-soft)" };
+  tag.textContent = MODES[mode].label;
+  tag.style.setProperty("--cur-accent", acc.c); tag.style.setProperty("--cur-accent-soft", acc.s);
+
+  if(item.home){
+    $("tbTitle").textContent = item.title;
+    renderDash(); $("viewDash").hidden = false;
+  } else if(item.url){
+    $("tbTitle").textContent = item.title;
+    let q = "?v=" + Date.now();
+    if(mode === "site" && state.site) q += "&site=" + encodeURIComponent(state.site);
+    const tail = item.hash ? "#" + item.hash : "";
+    const frame = $("frame");
+    $("loading").classList.remove("hide");
+    frame.hidden = false;
+    // 캐시 방지: 도구 파일을 고쳐 올리면 허브 화면에도 바로 새 버전이 뜨도록 매번 최신본을 불러옴
+    frame.src = item.url + q + tail;
+    const open = $("tbOpen"); open.href = item.url + (mode === "site" && state.site ? "?site=" + encodeURIComponent(state.site) : "") + tail; open.hidden = false;
+  } else {
+    $("tbTitle").textContent = item.title;
+    $("viewSoon").innerHTML = `<div class="soon-card"><div class="ic">${icon(item.icon)}</div><h3>${esc(item.title)}</h3><p>아직 만들어지지 않은 메뉴입니다.<br>도구 파일을 <code>tools/</code> 폴더에 올리고 이 메뉴 항목에 <code>url</code> 한 줄만 추가하면 이 자리에 열립니다.</p></div>`;
+    $("viewSoon").hidden = false;
+  }
+  renderSide();
+}
+$("frame").addEventListener("load", () => { $("loading").classList.add("hide"); });
+
+function setMode(mode){
+  if(mode === state.mode) return;
+  const wasOpen = drawerOpen;                       // 모바일: 구분을 바꿔도 메뉴 서랍은 열어 두어 바로 항목을 고를 수 있게 함
+  state.mode = mode; saveUi();
+  selectItem(MODES[mode].groups[0].items[0].id);   // 구분을 바꾸면 그 구분의 대시보드로
+  if(wasOpen){ drawerOpen = true; $("app").classList.add("drawer"); }
+}
+
+/* ---------- 대시보드 ---------- */
+function widgetHTML(w){
+  const more = w.more ? `<button type="button" class="w-more" data-go="${w.more.go}">${esc(w.more.label)} ›</button>` : "";
+  const body = state.widgetHTML[w.id] != null
+    ? state.widgetHTML[w.id]
+    : `<div class="w-empty">${SK[w.sk]()}<div class="w-hint"><span class="chip-pre">연결 전</span>${esc(w.hint || "")}</div></div>`;
+  return `<section class="w${w.span===2?" span2":""}" data-w="${w.id}"><div class="w-head"><span class="w-title">${esc(w.title)}</span>${more}</div><div class="w-body">${body}</div></section>`;
+}
+function renderDash(){
+  const cfg = WIDGETS[state.mode];
+  const d = new Date();
+  const days = ["일","월","화","수","목","금","토"];
+  const dateStr = d.getFullYear() + "." + String(d.getMonth()+1).padStart(2,"0") + "." + String(d.getDate()).padStart(2,"0") + " (" + days[d.getDay()] + ")";
+  const scope = state.mode === "site" ? (state.site || "현장을 선택해 주세요") : "전체 현장";
+  $("viewDash").innerHTML = `<div class="dash-head"><h2>${esc(MODES[state.mode].title)}</h2><span class="sub">${esc(scope)} · ${dateStr}</span></div>
+    <div class="dash"><div class="dash-main">${cfg.main.map(widgetHTML).join("")}</div><div class="dash-rail">${cfg.rail.map(widgetHTML).join("")}</div></div>`;
+}
+
+/* 칸에 내용 넣기:  Toolbox.setWidget("remain", "<ul>…</ul>")   /  내용 지우기: Toolbox.setWidget("remain", null) */
+window.Toolbox = {
+  setWidget(id, html){
+    if(html == null) delete state.widgetHTML[id]; else state.widgetHTML[id] = html;
+    const el = document.querySelector('[data-w="' + id + '"] .w-body');
+    if(el){ if(html == null) renderDash(); else el.innerHTML = html; }
+  },
+  select: selectItem,
+  get site(){ return state.site; },
+  get mode(){ return state.mode; }
+};
+
+/* ---------- 이벤트 ---------- */
+$("modeSeg").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if(b) setMode(b.dataset.mode); });
+$("nav").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if(b) selectItem(b.dataset.id); });
+$("siteBox").addEventListener("change", e => {
+  if(e.target.id !== "siteSel") return;
+  state.site = e.target.value; saveUi();
+  const f = findItem(state.itemId);
+  if(f) selectItem(state.itemId);    // 열려 있는 도구·대시보드를 새 현장으로 다시 표시
 });
+$("viewDash").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if(b) selectItem(b.dataset.go); });
+function closeDrawer(){ drawerOpen = false; $("app").classList.remove("drawer"); }
+$("hamb").addEventListener("click", () => { drawerOpen = !drawerOpen; $("app").classList.toggle("drawer", drawerOpen); });
+$("scrim").addEventListener("click", closeDrawer);
+
+/* ---------- 현장 목록 (중대재해 이행점검 도구에서 등록한 siteRegistry 를 그대로 읽음) ---------- */
+function applySites(names){
+  state.sites = names;
+  if(!names.includes(state.site)) state.site = names[0] || "";
+  saveUi();
+  renderSide();
+  const f = findItem(state.itemId);
+  if(f && f.item.home && state.mode === "site") renderDash();   // 도구가 열려 있을 때는 다시 불러오지 않음
+}
+function watchSites(){
+  try{
+    SA.db.collection("siteRegistry").orderBy("order").onSnapshot(
+      snap => applySites(snap.docs.map(d => d.data().name).filter(Boolean)),
+      err => console.warn("siteRegistry snapshot error", err));
+  }catch(e){ console.warn(e); }
+}
+
+/* ---------- 허브 시작 ---------- */
+let shellReady = false;
+function startShell(role){
+  if(shellReady) return; shellReady = true;
+  state.role = role || null;
+  const ui = loadUi();
+  state.site = ui.site || "";
+  const avail = Object.keys(MODES).filter(modeAvailable);
+  let mode = ui.mode && avail.includes(ui.mode) ? ui.mode : (role === "hq" || role === "admin" ? "hq" : "site");
+  if(!avail.includes(mode)) mode = avail[0] || "site";
+  state.mode = mode;
+  selectItem(MODES[mode].groups[0].items[0].id);
+}
 
 /* ==========================================================================
    로그인 · 권한
    ========================================================================== */
-const SA = window.SafetyAuth;
-const $ = id => document.getElementById(id);
 const gate = $("gate"), gateBody = $("gateBody");
 let shellStarted = false, lastRole = null, profile = null;
 let unsubProfile = null, unsubUsers = null, usersCache = [];
@@ -511,9 +765,8 @@ function route(user){
   if(profile.role === "admin" && !unsubUsers) watchUsers();
   if(!shellStarted){
     shellStarted = true;
-    VIS = LINKS.filter(l => SA.can(profile.role, l.key, "read"));
-    renderNav();
-    if(VIS.length) selectItem(0);
+    startShell(profile.role);
+    watchSites();
   }
 }
 
@@ -567,7 +820,9 @@ $("uList").addEventListener("click", async e => {
 if(!SA.configured()){
   // Firebase 설정이 비어 있으면 예전처럼 로그인 없이 미리보기만 제공
   $("setupBanner").classList.add("show");
-  renderNav(); selectItem(0);
+  state.sites = ["현장 1","현장 2","현장 3","현장 4","현장 5"];
+  startShell(null);
+  applySites(state.sites);
 } else if(!SA.boot()){
   showGateMsg("불러오지 못했습니다", "로그인 모듈을 불러오지 못했습니다. 네트워크를 확인한 뒤 새로고침해 주세요.");
 } else {
