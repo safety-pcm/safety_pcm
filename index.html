@@ -374,6 +374,8 @@ const MODES = {
         { id:"hq.review", title:"중대재해 이행점검 서류심사", icon:"shield", key:"dr", url:"tools/disaster-review.html" } ] },
       { label: "위험성평가", items: [
         { id:"hq.ra", title:"위험성평가 관리", icon:"alert", key:"ra", url:"tools/risk-assessment.html" } ] },
+      { label: "회의·기록", items: [
+        { id:"hq.minutes", title:"회의록", icon:"note", key:"mt", url:"tools/meeting-minutes.html" } ] },
       { label: "법무·거버넌스", items: [
         { id:"hq.legal", title:"법률자문 미팅일지",     icon:"book", key:"dev" },
         { id:"hq.gov",   title:"안전보건 관리체계 문서", icon:"folder", key:"dev" } ] }
@@ -434,7 +436,8 @@ const ICONS = {
   chart:'<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
   book:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
   hardhat:'<path d="M3 18h18v2H3z"/><path d="M5 18v-3a7 7 0 0 1 14 0v3"/><path d="M12 8V5M9 9.5 7.5 6M15 9.5 16.5 6"/>',
-  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  note:'<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><path d="M16 3v5h5"/><path d="M7 13h10M7 17h6M7 9h5"/>'
 };
 function icon(name){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || ICONS.folder) + '</svg>'; }
 
