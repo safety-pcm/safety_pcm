@@ -21,9 +21,9 @@
   //     dev 공개용 값 →  원하는 등급에 "read" 를 넣으면 대시보드·준비 중 메뉴가 보입니다.
   var PERMS = {
     admin:   { hq:"delete", dr:"delete", ra:"delete", nm:"delete", mt:"delete", dev:"delete" },
-    hq:      { hq:"write",  dr:"write",  ra:null,     nm:null,     mt:"write",  dev:null     },
+    hq:      { hq:"write",  dr:"write",  ra:null,     nm:null,     mt:null,     dev:null     },
     field:   { hq:"read",   dr:null,     ra:null,     nm:null,     mt:null,     dev:null     },
-    reader:  { hq:"read",   dr:"read",   ra:null,     nm:null,     mt:"read",   dev:null     },
+    reader:  { hq:"read",   dr:"read",   ra:null,     nm:null,     mt:null,     dev:null     },
     pending: { hq:null,     dr:null,     ra:null,     nm:null,     mt:null,     dev:null     }
   };
   var RANK = { read:1, write:2, delete:3 };
