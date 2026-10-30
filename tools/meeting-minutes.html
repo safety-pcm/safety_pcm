@@ -177,15 +177,6 @@
       <div class="hint" id="phHint">사진은 자동으로 줄여서 저장됩니다. 사진 아래 칸에 설명을 적으면 인쇄할 때 함께 나옵니다.</div>
     </div>
 
-    <div class="card">
-      <h2>결재 <span class="sp"></span><span class="hint" style="margin:0">비워 두면 인쇄물에 빈 칸으로 나옵니다</span></h2>
-      <div class="sign">
-        <div><label for="sg0">작성</label><input id="sg0"></div>
-        <div><label for="sg1">검토</label><input id="sg1"></div>
-        <div><label for="sg2">확인</label><input id="sg2"></div>
-        <div><label for="sg3">승인</label><input id="sg3"></div>
-      </div>
-    </div>
 
     <div class="sticky">
       <button class="btn pri" id="btnSave" type="button">저장</button>
@@ -301,15 +292,13 @@ const FIELDS = { kind:"fKind", date:"fDate", start:"fStart", end:"fEnd", place:"
                  attendees:"fAtt", summary:"fSummary", body:"fBody" };
 function blank(){
   return { id:null, kind:"", date:today(), start:"", end:"", place:"", writer:S.name, attendees:"",
-           summary:"", body:"", sign:[S.name, "", "", ""] };
+           summary:"", body:"" };
 }
 async function openEditor(m){
   S.cur = m ? JSON.parse(JSON.stringify(m)) : blank();
   S.cur._rm = [];
   S.photos = []; S.dirty = false;
   Object.entries(FIELDS).forEach(([k, id]) => { $(id).value = S.cur[k] || ""; });
-  const sg = S.cur.sign || [];
-  for(let i = 0; i < 4; i++) $("sg" + i).value = sg[i] || "";
   $("edTitle").textContent = m ? (m.kind || "회의록") + " · " + dateLabel(m).split(" ").slice(0, 3).join(" ") : "새 회의록";
   $("btnDel").hidden = !m || !canDelete();
   $("btnSave").hidden = !canWrite();
@@ -333,7 +322,6 @@ async function openEditor(m){
 function collect(){
   const c = Object.assign({}, S.cur);
   Object.entries(FIELDS).forEach(([k, id]) => { c[k] = $(id).value.trim(); });
-  c.sign = [0,1,2,3].map(i => $("sg" + i).value.trim());
   return c;
 }
 function grow(t){ t.style.height = "auto"; t.style.height = (t.scrollHeight + 2) + "px"; }
@@ -407,7 +395,7 @@ $("btnSave").addEventListener("click", async () => {
     const now = iso(), who = { updatedAt:now, updatedBy:S.user.uid, updatedByName:S.name };
     const ref = c.id ? db.collection("mt_minutes").doc(c.id) : db.collection("mt_minutes").doc();
     const doc = { kind:c.kind, date:c.date, start:c.start, end:c.end, place:c.place, writer:c.writer,
-                  attendees:c.attendees, summary:c.summary, body:c.body, sign:c.sign,
+                  attendees:c.attendees, summary:c.summary, body:c.body,
                   photoCount:S.photos.length, ...who };
     if(!c.id){ Object.assign(doc, { createdAt:now, createdBy:S.user.uid, createdByName:S.name }); await ref.set(doc); }
     else await ref.update(doc);
@@ -455,7 +443,6 @@ const B = "border:1px solid #000;padding:6px 8px;vertical-align:middle;";
 const HEAD = "background:#dde8f4;text-align:center;font-weight:bold;letter-spacing:2px;";
 function nl(s){ return esc(s).replace(/\n/g, "<br>"); }
 function formHtml(m, photos){
-  const sg = m.sign || [];
   const ph = photos.length
     ? `<div style="display:grid;grid-template-columns:${photos.length === 1 ? "1fr" : "1fr 1fr"};gap:8px">${photos.map(p =>
         `<div style="break-inside:avoid;text-align:center"><img src="${p.data}" style="width:100%;max-height:${photos.length === 1 ? "95mm" : "62mm"};object-fit:contain;display:block;margin:0 auto">${p.cap ? `<div style="font-size:9pt;margin-top:3px">${esc(p.cap)}</div>` : ""}</div>`).join("")}</div>`
@@ -467,7 +454,7 @@ function formHtml(m, photos){
       <table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:9.5pt">
         <tr><td rowspan="2" style="${B}${HEAD}width:9%;padding:2px;line-height:2">결<br>재</td>
           ${["작 성","검 토","확 인","승 인"].map(t => `<td style="${B}${HEAD}padding:2px">${t}</td>`).join("")}</tr>
-        <tr style="height:52px">${[0,1,2,3].map(i => `<td style="${B}text-align:center;vertical-align:bottom;font-size:9pt;padding:3px">${esc(sg[i] || "")}</td>`).join("")}</tr>
+        <tr style="height:52px">${[0,1,2,3].map(() => `<td style="${B}"></td>`).join("")}</tr>
       </table>
     </td></tr></table>
   <table style="width:100%;border-collapse:collapse;table-layout:fixed">
@@ -475,7 +462,7 @@ function formHtml(m, photos){
     <tr style="height:34px"><td style="${B}${HEAD}">회의종류</td><td style="${B}">${esc(m.kind || "")}</td><td style="${B}${HEAD}">일 시</td><td style="${B}font-size:9.5pt">${esc(dateLabel(m))}</td></tr>
     <tr style="height:34px"><td rowspan="2" style="${B}${HEAD}">참 석 자</td><td rowspan="2" style="${B}">${nl(m.attendees || "")}</td><td style="${B}${HEAD}">작 성 자</td><td style="${B}">${esc(m.writer || "")}</td></tr>
     <tr style="height:34px"><td style="${B}${HEAD}">장 소</td><td style="${B}">${esc(m.place || "")}</td></tr>
-    <tr style="height:150px"><td style="${B}${HEAD}">주요내용</td><td colspan="3" style="${B}vertical-align:top;line-height:1.6">${nl(m.summary || "")}</td></tr>
+    <tr style="height:150px"><td style="${B}${HEAD}">주요내용</td><td colspan="3" style="${B}vertical-align:middle;line-height:1.6">${nl(m.summary || "")}</td></tr>
     <tr style="height:${photos.length ? 280 : 380}px"><td style="${B}${HEAD}">내 용</td><td colspan="3" style="${B}vertical-align:top;line-height:1.6">${nl(m.body || "")}</td></tr>
     <tr style="height:${photos.length ? 0 : 230}px"><td style="${B}${HEAD}">관련사진</td><td colspan="3" style="${B}padding:8px">${ph}</td></tr>
   </table></div>`;
@@ -504,18 +491,18 @@ function fillCell(tc, text){
 }
 function fillSection(xml, m, photoCount){
   const tblStarts = []; xml.replace(/<hp:tbl /g, (s, i) => { tblStarts.push(i); return s; });
-  const sg = m.sign || [];
   const want = {
-    // [표 번호, 열, 행] → 내용
-    "0,2,1": sg[0], "0,3,1": sg[1], "0,4,1": sg[2], "0,5,1": sg[3],
+    // [표 번호, 열, 행] → 내용  (결재란은 출력 후 서명하도록 비워 둠)
     "1,1,0": m.kind, "1,3,0": dateLabel(m), "1,1,1": m.attendees, "1,3,1": m.writer, "1,3,2": m.place,
     "1,1,3": m.summary, "1,1,4": m.body,
     "1,1,5": photoCount ? `※ 관련사진 ${photoCount}매 — 안전관리 툴박스 회의록에 원본 보관 (사진 포함본은 인쇄/PDF 출력)` : ""
   };
+  const middle = { "1,1,3":1 };   // 주요내용 칸은 위아래 가운데 정렬
   return xml.replace(/<hp:tc [\s\S]*?<\/hp:tc>/g, (tc, pos) => {
     let t = 0; tblStarts.forEach((s, i) => { if(pos > s) t = i; });
     const a = tc.match(/<hp:cellAddr colAddr="(\d+)" rowAddr="(\d+)"\/>/); if(!a) return tc;
     const key = `${t},${a[1]},${a[2]}`;
+    if(middle[key]) tc = tc.replace(/(<hp:subList[^>]*?)vertAlign="TOP"/, '$1vertAlign="CENTER"');
     return (key in want && want[key]) ? fillCell(tc, want[key]) : tc;
   });
 }
