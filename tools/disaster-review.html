@@ -1631,6 +1631,8 @@ function buildSectionChunks(period, siteId, sec){
     const el = document.createElement('div');
     el.className = 'print-chunk';
     el.style.cssText = font + (idx===0 ? 'padding:14px 6px 0;' : 'padding:0 6px;');
+    /* 대분류(영역) 제목은 2번째 영역부터 새 페이지 맨 위에서 시작 (1번 영역은 점검 개요 바로 아래) */
+    if(idx===0 && sec.num>1){ el.dataset.pageBreak = '1'; el.style.paddingTop = '4px'; el.style.marginTop = '26px'; }
     el.innerHTML = (idx===0 ? headHtml : '') + printItemRowHtml(period, siteId, it, d[it.id] || {});
     return el;
   });
@@ -1714,7 +1716,8 @@ async function confirmPdfSave(){
     const contentW = pageW - margin*2;
     let cursorY = margin;
 
-    function placeCanvas(canvas, gap=3){
+    function placeCanvas(canvas, gap=3, breakBefore=false){
+      if(breakBefore && cursorY > margin + 0.5){ pdf.addPage(); cursorY = margin; }
       const imgW = contentW;
       const imgH = canvas.height * imgW / canvas.width;
       if(imgH > pageH - margin*2){
@@ -1746,7 +1749,7 @@ async function confirmPdfSave(){
       host.innerHTML = '';
       host.appendChild(chunks[i]);
       const canvas = await window.html2canvas(chunks[i], { scale:1.5, backgroundColor:'#ffffff', useCORS:true });
-      placeCanvas(canvas, chunks[i].classList && chunks[i].classList.contains('print-chunk') ? 0 : 3);
+      placeCanvas(canvas, chunks[i].classList && chunks[i].classList.contains('print-chunk') ? 0 : 3, chunks[i].dataset && chunks[i].dataset.pageBreak==='1');
     }
 
     const blob = pdf.output('blob');
