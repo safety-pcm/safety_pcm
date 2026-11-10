@@ -421,6 +421,8 @@ details[open] > summary .sec-chevron{ transform:rotate(90deg); }
 .viz-grid.eq{ grid-template-columns:1fr 1fr; }
 .viz-grid .chart-card{ margin-bottom:0; padding-bottom:14px; }
 .dash-actions{ display:inline-flex; gap:8px; margin-left:auto; }
+.overall-ta{ width:100%; min-height:340px; padding:14px 16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--ink); font:inherit; font-size:13.5px; line-height:1.75; resize:vertical; box-sizing:border-box; }
+.overall-print{ display:none; white-space:pre-wrap; font-size:12.5px; line-height:1.75; color:#16212B; padding:6px 2px; }
 .viz-title{ font-size:12.5px; font-weight:700; margin:0 0 2px; }
 .viz-sub{ font-size:11.5px; color:var(--ink-faint); margin:0 0 8px; }
 .legend{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:11.5px; color:var(--ink-soft); margin-top:8px; }
@@ -459,6 +461,9 @@ table.matrix tr.totalrow td{ border-top:2px solid var(--border); font-weight:700
   .matrix-wrap{ overflow:visible; }
   table.matrix{ min-width:0; }
   .pb-before{ break-before:page; }
+  .overall-empty{ display:none !important; }
+  .overall-print{ display:block; font-size:13.5px; }
+  #overallPage{ zoom:1; }
   .section-title-row{ break-after:avoid; }
   .dash-page{ break-inside:avoid; zoom:.9; }
   .weak-list{ grid-template-columns:repeat(3,1fr); }
@@ -1342,12 +1347,14 @@ async function saveDashboardPdf(){
     const pdf = new jsPDF('p','mm','a4');
     const pageW = 210, pageH = 297, margin = 10;
     const maxW = pageW - margin*2, maxH = pageH - margin*2;
-    const pages = Array.from(document.querySelectorAll('#app .dash-page'));
+    const pages = Array.from(document.querySelectorAll('#app .dash-page')).filter(pg=> !pg.classList.contains('overall-empty'));
     for(let i=0; i<pages.length; i++){
       btn.textContent = `PDF 생성 중… (${i+1}/${pages.length})`;
       const clone = pages[i].cloneNode(true);
       clone.classList.remove('pb-before');
       clone.querySelectorAll('.dash-actions, .no-print').forEach(n=> n.remove());
+      clone.querySelectorAll('.overall-print').forEach(n=>{ n.style.display='block'; n.style.fontSize='14.5px'; n.style.lineHeight='1.85'; });
+      clone.querySelectorAll('.section-title-row .hint').forEach(n=>{ if(clone.id==='overallPage' || n.closest('#overallPage')) n.remove(); });
       clone.querySelectorAll('.viz-grid').forEach(n=> n.style.gridTemplateColumns = n.classList.contains('eq') ? '1fr 1fr' : '1.4fr 1fr');
       clone.querySelectorAll('.dash-grid').forEach(n=> n.style.gridTemplateColumns = 'repeat(4,1fr)');
       clone.querySelectorAll('.chart-card, .matrix-wrap').forEach(n=>{ n.style.overflow='visible'; n.style.boxShadow='none'; });
@@ -1377,6 +1384,7 @@ async function saveDashboardPdf(){
 
 function renderDashboard(){
   const app = document.getElementById('app');
+  if(document.activeElement && document.activeElement.id==='overallSummary') return;   // 종합의견 입력 중에는 다시 그리지 않음
   const rows = siteOrder.map(id=>{
     const { overall } = computeRecord(id);
     return { id, name: siteName(id), pct: overall.pct, score: overall.score, weight: overall.weight, answered: overall.answered };
@@ -1475,12 +1483,19 @@ function renderDashboard(){
     <div class="matrix-wrap"><table class="matrix"><thead><tr>${matrixHead}</tr></thead><tbody>${matrixRows}</tbody></table></div>
     <p class="foot-note">전체 배점 ${TOTAL_WEIGHT}점(총 ${TOTAL_ITEMS}개 문항, "해당없음" 응답은 배점·점수에서 제외) · 원본 서식 「■ 안전보건 사고예방 확인점검(법적서류 분야)」 기준 · 기간이 바뀌면 각 현장의 점검 기록은 별도로 저장됩니다.</p>
     </div>
+    <div class="dash-page pb-before ${(overallNote[currentPeriod]||'').trim()?'':'overall-empty'}" data-page="4" id="overallPage">
+      <div class="section-title-row"><h2>${escapeHtml(periodLabel(currentPeriod))} 종합의견</h2><span class="hint no-print">입력하면 인쇄/PDF 마지막 장(A4 1페이지)에 들어갑니다 · 비워 두면 출력되지 않습니다</span></div>
+      <textarea id="overallSummary" class="no-print overall-ta" placeholder="이번 반기 이행점검 종합의견을 입력하세요. (줄바꿈·번호는 입력한 그대로 출력됩니다)">${escapeHtml(overallNote[currentPeriod]||'')}</textarea>
+      <div id="overallPrint" class="overall-print">${escapeHtml(overallNote[currentPeriod]||'')}</div>
+    </div>
   `;
   app.querySelectorAll('.site-card').forEach(c=>{
     c.addEventListener('click', ()=>{ currentView=c.dataset.view; renderMain(); window.scrollTo({top:0,behavior:'instant'}); });
   });
   const dpb = document.getElementById('dashPrintBtn');
   if(dpb) dpb.addEventListener('click', ()=> window.print());
+  const ota = document.getElementById('overallSummary');
+  if(ota) ota.addEventListener('input', onOverallInput);
   const dpdf = document.getElementById('dashPdfBtn');
   if(dpdf) dpdf.addEventListener('click', saveDashboardPdf);
   renderTrendInto('trendBox', siteOrder.slice());
@@ -2151,6 +2166,47 @@ function subscribeRecord(period, siteId){
 
 function subscribeAllForPeriod(period){
   siteOrder.forEach(id => subscribeRecord(period, id));
+  subscribeOverall(period);
+}
+
+/* ---- 종합 현황 '종합의견' (기간별 1건, records 컬렉션의 '<기간>__overall' 문서에 저장) ---- */
+const overallNote = {};   // period -> text
+function overallKey(period){ return period+'__overall'; }
+function subscribeOverall(period){
+  if(!db) return;
+  try{
+    const unsub = db.doc('records/'+overallKey(period)).onSnapshot(snap=>{
+      const text = snap.exists ? (snap.data().summary || '') : '';
+      const ta = document.getElementById('overallSummary');
+      if(period!==currentPeriod) return;
+      if(ta && document.activeElement===ta) return;      // 입력 중에는 덮어쓰지 않음
+      overallNote[period] = text;
+      if(ta){ ta.value = text; syncOverallPrint(); }
+    }, err=>{ console.warn('overall snapshot error', err); });
+    activeRecordUnsubs.push(unsub);
+  }catch(e){ console.warn(e); }
+}
+function syncOverallPrint(){
+  const ta = document.getElementById('overallSummary');
+  const pr = document.getElementById('overallPrint');
+  const page = document.getElementById('overallPage');
+  const text = ta ? ta.value : (overallNote[currentPeriod]||'');
+  if(pr) pr.textContent = text;
+  if(page) page.classList.toggle('overall-empty', !text.trim());
+}
+let overallTimer = null;
+function onOverallInput(){
+  const ta = document.getElementById('overallSummary');
+  if(!ta) return;
+  overallNote[currentPeriod] = ta.value;
+  syncOverallPrint();
+  const period = currentPeriod, text = ta.value;
+  clearTimeout(overallTimer);
+  overallTimer = setTimeout(async ()=>{
+    if(!db) return;
+    try{ await db.doc('records/'+overallKey(period)).set({ summary: text }, { merge:true }); }
+    catch(e){ console.warn('종합의견 저장 실패', e); toast('종합의견을 저장하지 못했습니다. 연결 상태를 확인해 주세요.'); }
+  }, 600);
 }
 function unsubscribeAllRecords(){
   activeRecordUnsubs.forEach(fn=>{ try{ fn(); }catch(e){} });
@@ -2181,6 +2237,7 @@ async function boot(){
   setSaveBadge('live');
 
   downloadsCap = { save: browserSave };
+  subscribeOverall(currentPeriod);
 
   let registrySeeded = false;
   try{
