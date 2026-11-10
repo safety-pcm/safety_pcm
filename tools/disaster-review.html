@@ -422,7 +422,14 @@ details[open] > summary .sec-chevron{ transform:rotate(90deg); }
 .viz-grid .chart-card{ margin-bottom:0; padding-bottom:14px; }
 .dash-actions{ display:inline-flex; gap:8px; margin-left:auto; }
 .overall-ta{ width:100%; min-height:340px; padding:14px 16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--ink); font:inherit; font-size:13.5px; line-height:1.75; resize:vertical; box-sizing:border-box; }
-.overall-print{ display:none; white-space:pre-wrap; font-size:12.5px; line-height:1.75; color:#16212B; padding:6px 2px; }
+.overall-print{ display:none; --ov-fs:14px; font-size:var(--ov-fs); line-height:1.75; color:#000; padding:0 4px; font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
+.overall-print .ov-title{ text-align:center; font-weight:700; font-size:1.45em; margin:0 0 1.1em; letter-spacing:-.01em; }
+.overall-print .ov-h{ font-weight:700; font-size:1.1em; margin:1.15em 0 .35em; }
+.overall-print .ov-i{ display:flex; gap:.5em; padding-left:.8em; margin:.18em 0; }
+.overall-print .ov-i .k{ flex:0 0 auto; min-width:1.4em; }
+.overall-print .ov-i .t{ flex:1; }
+.overall-print .ov-n{ padding-left:3.1em; text-indent:-1.15em; margin:.12em 0; font-size:.93em; color:#333; }
+.overall-print .ov-gap{ height:.4em; }
 .viz-title{ font-size:12.5px; font-weight:700; margin:0 0 2px; }
 .viz-sub{ font-size:11.5px; color:var(--ink-faint); margin:0 0 8px; }
 .legend{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:11.5px; color:var(--ink-soft); margin-top:8px; }
@@ -462,8 +469,9 @@ table.matrix tr.totalrow td{ border-top:2px solid var(--border); font-weight:700
   table.matrix{ min-width:0; }
   .pb-before{ break-before:page; }
   .overall-empty{ display:none !important; }
-  .overall-print{ display:block; font-size:13.5px; }
+  .overall-print{ display:block; }
   #overallPage{ zoom:1; }
+  #overallPage .section-title-row{ display:none; }
   .section-title-row{ break-after:avoid; }
   .dash-page{ break-inside:avoid; zoom:.9; }
   .weak-list{ grid-template-columns:repeat(3,1fr); }
@@ -1353,8 +1361,14 @@ async function saveDashboardPdf(){
       const clone = pages[i].cloneNode(true);
       clone.classList.remove('pb-before');
       clone.querySelectorAll('.dash-actions, .no-print').forEach(n=> n.remove());
-      clone.querySelectorAll('.overall-print').forEach(n=>{ n.style.display='block'; n.style.fontSize='14.5px'; n.style.lineHeight='1.85'; });
-      clone.querySelectorAll('.section-title-row .hint').forEach(n=>{ if(clone.id==='overallPage' || n.closest('#overallPage')) n.remove(); });
+      if(clone.id==='overallPage'){
+        clone.querySelectorAll('.section-title-row').forEach(n=> n.remove());
+        clone.querySelectorAll('.overall-print').forEach(n=>{
+          n.innerHTML = formatOverallHtml(overallNote[currentPeriod]||'', currentPeriod);
+          n.style.display = 'block';
+          n.style.setProperty('--ov-fs', fitOverallFontPx(n.innerHTML, 840, 1130)+'px');
+        });
+      }
       clone.querySelectorAll('.viz-grid').forEach(n=> n.style.gridTemplateColumns = n.classList.contains('eq') ? '1fr 1fr' : '1.4fr 1fr');
       clone.querySelectorAll('.dash-grid').forEach(n=> n.style.gridTemplateColumns = 'repeat(4,1fr)');
       clone.querySelectorAll('.chart-card, .matrix-wrap').forEach(n=>{ n.style.overflow='visible'; n.style.boxShadow='none'; });
@@ -1486,14 +1500,14 @@ function renderDashboard(){
     <div class="dash-page pb-before ${(overallNote[currentPeriod]||'').trim()?'':'overall-empty'}" data-page="4" id="overallPage">
       <div class="section-title-row"><h2>${escapeHtml(periodLabel(currentPeriod))} 종합의견</h2><span class="hint no-print">입력하면 인쇄/PDF 마지막 장(A4 1페이지)에 들어갑니다 · 비워 두면 출력되지 않습니다</span></div>
       <textarea id="overallSummary" class="no-print overall-ta" placeholder="이번 반기 이행점검 종합의견을 입력하세요. (줄바꿈·번호는 입력한 그대로 출력됩니다)">${escapeHtml(overallNote[currentPeriod]||'')}</textarea>
-      <div id="overallPrint" class="overall-print">${escapeHtml(overallNote[currentPeriod]||'')}</div>
+      <div id="overallPrint" class="overall-print">${formatOverallHtml(overallNote[currentPeriod]||'', currentPeriod)}</div>
     </div>
   `;
   app.querySelectorAll('.site-card').forEach(c=>{
     c.addEventListener('click', ()=>{ currentView=c.dataset.view; renderMain(); window.scrollTo({top:0,behavior:'instant'}); });
   });
   const dpb = document.getElementById('dashPrintBtn');
-  if(dpb) dpb.addEventListener('click', ()=> window.print());
+  if(dpb) dpb.addEventListener('click', ()=>{ prepareOverallPrint(); window.print(); });
   const ota = document.getElementById('overallSummary');
   if(ota) ota.addEventListener('input', onOverallInput);
   const dpdf = document.getElementById('dashPdfBtn');
@@ -2186,12 +2200,55 @@ function subscribeOverall(period){
     activeRecordUnsubs.push(unsub);
   }catch(e){ console.warn(e); }
 }
+/* 종합의견을 공문 형식으로 정리: 제목 / 1. 큰제목 / 가. 항목(내어쓰기) / ※ 참고(작은 글씨)
+   번호·기호가 없는 짧은 줄은 큰제목으로, 항목이 아닌 긴 줄은 참고 문장으로 처리합니다. */
+function formatOverallHtml(text, period){
+  const lines = String(text||'').replace(/\r/g,'').split('\n').map(l=>l.replace(/\s+$/,''));
+  while(lines.length && !lines[0].trim()) lines.shift();
+  while(lines.length && !lines[lines.length-1].trim()) lines.pop();
+  let title = `${periodLabel(period)} 종합의견`;
+  if(lines.length && /종합의견/.test(lines[0]) && lines[0].length<=60) title = lines.shift().trim();
+  let n = 0, html = '';
+  lines.forEach(raw=>{
+    const l = raw.trim();
+    if(!l){ html += '<div class="ov-gap"></div>'; return; }
+    let m;
+    if((m = l.match(/^(\d+)\s*[.)]\s*(.*)$/))){ n = parseInt(m[1],10); html += `<div class="ov-h">${n}. ${escapeHtml(m[2])}</div>`; return; }
+    if((m = l.match(/^([가-하])\s*[.)]\s*(.*)$/))){ html += `<div class="ov-i"><span class="k">${m[1]}.</span><span class="t">${escapeHtml(m[2])}</span></div>`; return; }
+    if((m = l.match(/^[*※]\s*(.*)$/))){ html += `<div class="ov-n">※ ${escapeHtml(m[1])}</div>`; return; }
+    if(l.length<=22 && !/([.]|함|임|됨|음|다)$/.test(l)){ n += 1; html += `<div class="ov-h">${n}. ${escapeHtml(l)}</div>`; return; }
+    html += `<div class="ov-n">※ ${escapeHtml(l)}</div>`;
+  });
+  return `<div class="ov-title">${escapeHtml(title)}</div>${html}`;
+}
+/* 정해진 폭·높이 안에 들어가는 가장 큰 글자 크기(px)를 찾아 A4 한 페이지를 알맞게 채움 */
+function fitOverallFontPx(html, widthPx, heightPx){
+  const probe = document.createElement('div');
+  probe.className = 'overall-print';
+  probe.style.cssText = `display:block;position:fixed;left:-99999px;top:0;width:${widthPx}px;`;
+  probe.innerHTML = html;
+  document.body.appendChild(probe);
+  let best = 11;
+  for(let fs=19; fs>=11; fs-=0.5){
+    probe.style.setProperty('--ov-fs', fs+'px');
+    if(probe.scrollHeight <= heightPx){ best = fs; break; }
+  }
+  document.body.removeChild(probe);
+  return best;
+}
+function prepareOverallPrint(){
+  const pr = document.getElementById('overallPrint');
+  if(!pr) return;
+  pr.innerHTML = formatOverallHtml(overallNote[currentPeriod]||'', currentPeriod);
+  pr.style.setProperty('--ov-fs', fitOverallFontPx(pr.innerHTML, 700, 960)+'px');
+}
+window.addEventListener('beforeprint', prepareOverallPrint);
 function syncOverallPrint(){
   const ta = document.getElementById('overallSummary');
   const pr = document.getElementById('overallPrint');
   const page = document.getElementById('overallPage');
   const text = ta ? ta.value : (overallNote[currentPeriod]||'');
-  if(pr) pr.textContent = text;
+  if(pr) pr.innerHTML = formatOverallHtml(text, currentPeriod);
   if(page) page.classList.toggle('overall-empty', !text.trim());
 }
 let overallTimer = null;
