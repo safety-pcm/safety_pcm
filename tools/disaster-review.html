@@ -414,10 +414,51 @@ details[open] > summary .sec-chevron{ transform:rotate(90deg); }
   .period-select{ order:2; }
   .save-badge{ order:3; margin-left:0; }
 }
+
+/* ---------- dashboard visuals ---------- */
+.viz-grid{ display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-bottom:22px; align-items:stretch; }
+@media screen and (max-width:900px){ .viz-grid{ grid-template-columns:1fr; } }
+.viz-grid .chart-card{ margin-bottom:0; padding-bottom:14px; }
+.dash-actions{ display:inline-flex; gap:8px; margin-left:auto; }
+.viz-title{ font-size:12.5px; font-weight:700; margin:0 0 2px; }
+.viz-sub{ font-size:11.5px; color:var(--ink-faint); margin:0 0 8px; }
+.legend{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:11.5px; color:var(--ink-soft); margin-top:8px; }
+.legend .lg{ display:inline-flex; align-items:center; gap:5px; }
+.legend .sw{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+.weak-list{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin-bottom:22px; }
+.weak-item{ background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--low); border-radius:8px; padding:10px 12px; font-size:12.5px; line-height:1.5; }
+.weak-item .wn{ font-weight:700; }
+.weak-item .wm{ color:var(--ink-faint); font-size:11.5px; margin-top:2px; }
+table.matrix td.heat{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12px; }
+table.matrix td.heat-good{ background:var(--good-soft); color:var(--good); }
+table.matrix td.heat-mid{ background:var(--mid-soft); color:var(--mid); }
+table.matrix td.heat-low{ background:var(--low-soft); color:var(--low); }
+table.matrix td.heat-empty{ background:var(--surface-2); color:var(--ink-faint); }
+table.matrix td.avgcol, table.matrix th.avgcol{ border-left:2px solid var(--border); }
+table.matrix tr.totalrow td{ border-top:2px solid var(--border); font-weight:700; }
+@page{ size:A4; margin:12mm; }
 @media print{
-  .topbar, .chip-nav, .print-btn, .modal-overlay{ display:none !important; }
+  :root, :root:not([data-theme="light"]), :root[data-theme="dark"]{
+    --ink:#16212B; --ink-soft:#4B5A68; --ink-faint:#7C8A99;
+    --paper:#ffffff; --surface:#FFFFFF; --surface-2:#F5F8F9;
+    --border:#D7DEE1; --border-soft:#E5EAEC;
+    --accent:#1D5673; --accent-soft:#E3EDF1; --accent-strong:#0F3A4F;
+    --good:#1E8A5F; --good-soft:#E4F3EC; --mid:#B8790E; --mid-soft:#FBF0DC;
+    --low:#C0392B; --low-soft:#FBE7E4; --na:#7C8A99; --na-soft:#EEF1F3; --shadow:none;
+  }
+  .topbar, .chip-nav, .print-btn, .modal-overlay, .toast{ display:none !important; }
   details.section-card{ break-inside:avoid; }
-  body{ background:#fff; }
+  body{ background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .wrap{ max-width:none; padding:0; }
+  .site-card, .chart-card, .matrix-wrap, .viz-grid, .weak-item{ break-inside:avoid; box-shadow:none; }
+  .dash-grid{ grid-template-columns:repeat(4,1fr); }
+  .viz-grid{ grid-template-columns:1.4fr 1fr; }
+  .chart-card{ overflow:visible; }
+  .matrix-wrap{ overflow:visible; }
+  table.matrix{ min-width:0; }
+  .pb-before{ break-before:page; }
+  .section-title-row{ break-after:avoid; }
+  .no-print{ display:none !important; }
 }
 </style>
 
@@ -571,7 +612,9 @@ siteOrder = DEFAULT_SITE_SEED.map(s=>s.id);
 
 /* ====================== SCORING ====================== */
 function computeRecord(siteId){
-  const data = recordData[recKey(currentPeriod, siteId)] || {};
+  return computeFromData(recordData[recKey(currentPeriod, siteId)] || {});
+}
+function computeFromData(data){
   const sections = SECTIONS.map(sec => {
     let score=0, weight=0, answered=0;
     sec.items.forEach(it => {
@@ -1127,6 +1170,205 @@ function buildBarChartSvg(rows){
   return `<svg viewBox="0 0 ${svgW} ${totalH}" style="width:100%; height:auto; max-width:640px; display:block;">${grid}${bars}</svg>`;
 }
 
+
+/* ====================== DASHBOARD VISUALS ====================== */
+const SITE_COLORS = ['#2F7FB8','#E08A1E','#2E9E6B','#B04FA0','#D9534F','#5B6B7A','#8E7CC3','#17A2B8'];
+function siteColor(i){ return SITE_COLORS[i % SITE_COLORS.length]; }
+function shortTitle(t, n){ return t.length>n ? t.slice(0,n)+'…' : t; }
+
+function legendHtml(items){
+  return `<div class="legend">${items.map(it=>`<span class="lg"><i class="sw" style="background:${it.color}"></i>${escapeHtml(it.name)}</span>`).join('')}</div>`;
+}
+
+/* 꺾은선 그래프: x 라벨(문자열 배열) × 시리즈(값 0~100 또는 null) */
+function lineChartSvg({labels, series, width=640, height=280, xTitle=''}){
+  const padL=38, padR=14, padT=14, padB= xTitle?44:30;
+  const plotW = width-padL-padR, plotH = height-padT-padB;
+  const n = labels.length;
+  const x = i => padL + (n===1 ? plotW/2 : i*plotW/(n-1));
+  const y = v => padT + plotH - Math.max(0,Math.min(100,v))/100*plotH;
+  let g = '';
+  [0,20,40,60,80,100].forEach(v=>{
+    g += `<line x1="${padL}" y1="${y(v)}" x2="${width-padR}" y2="${y(v)}" style="stroke:var(--border-soft)" stroke-width="1"/>
+      <text x="${padL-6}" y="${y(v)+3.5}" font-size="10" text-anchor="end" style="fill:var(--ink-faint)" font-family="'IBM Plex Mono',monospace">${v}</text>`;
+  });
+  [[80,'양호 80%','var(--good)'],[60,'주의 60%','var(--mid)']].forEach(([v,t,c])=>{
+    g += `<line x1="${padL}" y1="${y(v)}" x2="${width-padR}" y2="${y(v)}" style="stroke:${c}" stroke-width="1" stroke-dasharray="4 4" opacity=".55"/>
+      <text x="${width-padR-2}" y="${y(v)-3}" font-size="9" text-anchor="end" style="fill:${c}">${t}</text>`;
+  });
+  labels.forEach((lb,i)=>{
+    const parts = String(lb).split('\n');
+    g += `<text x="${x(i)}" y="${padT+plotH+14}" font-size="10" text-anchor="middle" style="fill:var(--ink-soft)" font-weight="600">${escapeHtml(parts[0])}</text>`;
+    if(parts[1]) g += `<text x="${x(i)}" y="${padT+plotH+26}" font-size="9.5" text-anchor="middle" style="fill:var(--ink-faint)">${escapeHtml(parts[1])}</text>`;
+  });
+  if(xTitle) g += `<text x="${padL+plotW/2}" y="${height-4}" font-size="10" text-anchor="middle" style="fill:var(--ink-faint)">${escapeHtml(xTitle)}</text>`;
+  let lines = '';
+  series.forEach(se=>{
+    let seg = [];
+    const flush = ()=>{ if(seg.length>1) lines += `<polyline points="${seg.join(' ')}" fill="none" style="stroke:${se.color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`; seg=[]; };
+    se.values.forEach((v,i)=>{ if(v===null||v===undefined){ flush(); } else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`); });
+    flush();
+    se.values.forEach((v,i)=>{
+      if(v===null||v===undefined) return;
+      lines += `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3.4" style="fill:var(--surface);stroke:${se.color}" stroke-width="2"><title>${escapeHtml(se.name)} · ${escapeHtml(String(labels[i]).replace('\n',' '))} · ${Math.round(v)}%</title></circle>`;
+    });
+  });
+  return `<svg viewBox="0 0 ${width} ${height}" style="width:100%;height:auto;display:block;">${g}${lines}</svg>`;
+}
+
+/* 레이더(거미줄) 그래프: 13개 영역 × 현장 */
+function radarChartSvg({axes, series, size=340}){
+  const cx=size/2, cy=size/2+4, R=size/2-38, n=axes.length;
+  const ang = i => -Math.PI/2 + i*2*Math.PI/n;
+  const pt = (i,v)=> [cx+Math.cos(ang(i))*R*v/100, cy+Math.sin(ang(i))*R*v/100];
+  let g='';
+  [25,50,75,100].forEach(v=>{
+    const pts = axes.map((_,i)=>pt(i,v).map(c=>c.toFixed(1)).join(',')).join(' ');
+    g += `<polygon points="${pts}" fill="none" style="stroke:var(--border)" stroke-width="${v===100?1.2:.8}"/>`;
+    g += `<text x="${cx+3}" y="${cy-R*v/100-2}" font-size="8.5" style="fill:var(--ink-faint)" font-family="'IBM Plex Mono',monospace">${v}</text>`;
+  });
+  axes.forEach((a,i)=>{
+    const [ex,ey]=pt(i,100), [lx,ly]=pt(i,116);
+    g += `<line x1="${cx}" y1="${cy}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" style="stroke:var(--border-soft)" stroke-width=".8"/>`;
+    g += `<text x="${lx.toFixed(1)}" y="${(ly+3.5).toFixed(1)}" font-size="11" font-weight="700" text-anchor="middle" style="fill:var(--ink-soft)"><title>${escapeHtml(a.title)}</title>${a.num}</text>`;
+  });
+  let polys='';
+  series.forEach(se=>{
+    const pts = se.values.map((v,i)=>pt(i,v===null?0:v).map(c=>c.toFixed(1)).join(',')).join(' ');
+    polys += `<polygon points="${pts}" style="fill:${se.color};stroke:${se.color}" fill-opacity=".10" stroke-width="2.2" stroke-linejoin="round"/>`;
+    se.values.forEach((v,i)=>{ if(v===null) return; const [px,py]=pt(i,v); polys += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="2.6" style="fill:${se.color}"><title>${escapeHtml(se.name)} · ${axes[i].num}번 · ${Math.round(v)}%</title></circle>`; });
+  });
+  return `<svg viewBox="0 0 ${size} ${size+8}" style="width:100%;height:auto;max-width:380px;display:block;margin:0 auto;">${g}${polys}</svg>`;
+}
+
+/* 평가 분포: 현장별 우수/보통/미흡/해당없음/미응답 문항 수 (100% 누적 막대) */
+function distributionHtml(){
+  const cats = [
+    {k:'good', name:'우수', color:'var(--good)'}, {k:'mid', name:'보통', color:'var(--mid)'},
+    {k:'low', name:'미흡', color:'var(--low)'}, {k:'na', name:'해당없음', color:'var(--na)'},
+    {k:'none', name:'미응답', color:'var(--border)'}
+  ];
+  const rowH=30, gap=12, labelW=118, plotW=620, top=4;
+  const rows = siteOrder.map(id=>{
+    const d = recordData[recKey(currentPeriod,id)] || {};
+    const c = {good:0, mid:0, low:0, na:0, none:0};
+    ALL_ITEMS.forEach(it=>{ const r = d[it.id] && d[it.id].rating; if(r && c[r]!==undefined) c[r]++; else c.none++; });
+    return {id, c};
+  });
+  const totalH = top + rows.length*(rowH+gap);
+  let svg = '';
+  rows.forEach((r,i)=>{
+    const yy = top + i*(rowH+gap);
+    svg += `<text x="${labelW-10}" y="${yy+rowH/2+4}" font-size="12" font-weight="600" text-anchor="end" style="fill:var(--ink)">${escapeHtml(shortTitle(siteName(r.id),9))}</text>`;
+    let xx = labelW;
+    cats.forEach(ct=>{
+      const w = r.c[ct.k]/TOTAL_ITEMS*plotW;
+      if(w<=0) return;
+      svg += `<rect x="${xx.toFixed(1)}" y="${yy}" width="${w.toFixed(1)}" height="${rowH}" style="fill:${ct.color}"><title>${escapeHtml(siteName(r.id))} · ${ct.name} ${r.c[ct.k]}문항</title></rect>`;
+      if(w>=22 && ct.k!=='none') svg += `<text x="${(xx+w/2).toFixed(1)}" y="${yy+rowH/2+4}" font-size="11" font-weight="700" text-anchor="middle" style="fill:#fff">${r.c[ct.k]}</text>`;
+      else if(w>=22) svg += `<text x="${(xx+w/2).toFixed(1)}" y="${yy+rowH/2+4}" font-size="11" text-anchor="middle" style="fill:var(--ink-faint)">${r.c[ct.k]}</text>`;
+      xx += w;
+    });
+  });
+  return `<svg viewBox="0 0 ${labelW+plotW+8} ${totalH}" style="width:100%;height:auto;max-width:780px;display:block;">${svg}</svg>`
+    + legendHtml(cats.map(c=>({name:c.name, color:c.color})));
+}
+
+/* 반기별 추이(꺾은선): 이전 기간 기록을 불러와 2개 이상의 기간에 기록이 있을 때만 표시 */
+const trendCache = {};
+async function renderTrendInto(boxId, siteIdsAtStart){
+  const box = document.getElementById(boxId);
+  if(!box) return;
+  if(!db){ box.style.display='none'; return; }
+  const jobs = [];
+  PERIOD_OPTIONS.forEach(po=> siteIdsAtStart.forEach(id=>{
+    const key = recKey(po.key,id);
+    if(po.key===currentPeriod){ return; }
+    const hit = trendCache[key];
+    if(hit && Date.now()-hit.t < 30000) return;   // 30초 안에 불러온 값은 재사용
+    jobs.push(db.doc('records/'+key).get().then(sn=>{ trendCache[key] = { t:Date.now(), data: sn.exists ? sn.data() : null }; }).catch(()=>{ trendCache[key] = { t:Date.now(), data:null }; }));
+  }));
+  await Promise.all(jobs);
+  if(!document.getElementById(boxId)) return; // 화면이 바뀜
+  const dataFor = (pk,id)=> pk===currentPeriod ? (recordData[recKey(pk,id)]||null) : (trendCache[recKey(pk,id)] ? trendCache[recKey(pk,id)].data : null);
+  const periods = PERIOD_OPTIONS.filter(po=> siteIdsAtStart.some(id=>{ const dd=dataFor(po.key,id); return dd && computeFromData(dd).overall.pct!==null; }));
+  if(periods.length<2){
+    box.innerHTML = `<div class="viz-sub" style="margin:0;">반기별 추이 — 이전 반기 기록이 함께 쌓이면 여기에 꺾은선 그래프로 표시됩니다.</div>`;
+    box.classList.add('no-print');
+    return;
+  }
+  const labels = periods.map(po=> periodLabel(po.key).replace('년 ','\n'));
+  const series = siteIdsAtStart.map((id,i)=>({
+    name: siteName(id), color: siteColor(i),
+    values: periods.map(po=>{ const dd=dataFor(po.key,id); return dd ? computeFromData(dd).overall.pct : null; })
+  })).filter(se=> se.values.some(v=>v!==null));
+  box.innerHTML = `<h3 class="viz-title">반기별 종합 이행률 추이</h3><p class="viz-sub">기간별 현장 종합 이행률(%) 변화</p>`
+    + lineChartSvg({labels, series, height:250}) + legendHtml(series);
+}
+
+
+/* 종합 현황을 A4 3장짜리 PDF 파일로 저장 (화면의 그래프를 그대로 캡처, 항상 밝은 배경) */
+async function saveDashboardPdf(){
+  const btn = document.getElementById('dashPdfBtn');
+  if(!btn || btn.disabled) return;
+  const original = btn.textContent;
+  btn.disabled = true;
+  if(typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined'){
+    btn.textContent = '문서 도구 불러오는 중…';
+    for(let i=0; i<20 && (typeof window.jspdf==='undefined' || typeof window.html2canvas==='undefined'); i++){
+      await new Promise(r=>setTimeout(r,300));
+    }
+  }
+  if(typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined'){
+    toast('PDF 생성 도구를 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.');
+    btn.disabled = false; btn.textContent = original;
+    return;
+  }
+  const LIGHT = {'--ink':'#16212B','--ink-soft':'#4B5A68','--ink-faint':'#7C8A99','--paper':'#ffffff','--surface':'#FFFFFF','--surface-2':'#F5F8F9',
+    '--border':'#D7DEE1','--border-soft':'#E5EAEC','--accent':'#1D5673','--accent-soft':'#E3EDF1','--accent-strong':'#0F3A4F',
+    '--good':'#1E8A5F','--good-soft':'#E4F3EC','--mid':'#B8790E','--mid-soft':'#FBF0DC','--low':'#C0392B','--low-soft':'#FBE7E4','--na':'#7C8A99','--na-soft':'#EEF1F3','--shadow':'none'};
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed; left:-99999px; top:0; width:1000px; background:#ffffff; padding:0; font-family:"IBM Plex Sans","Malgun Gothic","Apple SD Gothic Neo",sans-serif; color:#16212B;';
+  Object.keys(LIGHT).forEach(k=> host.style.setProperty(k, LIGHT[k]));
+  document.body.appendChild(host);
+  try{
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageW = 210, pageH = 297, margin = 10;
+    const maxW = pageW - margin*2, maxH = pageH - margin*2;
+    const pages = Array.from(document.querySelectorAll('#app .dash-page'));
+    for(let i=0; i<pages.length; i++){
+      btn.textContent = `PDF 생성 중… (${i+1}/${pages.length})`;
+      const clone = pages[i].cloneNode(true);
+      clone.classList.remove('pb-before');
+      clone.querySelectorAll('.dash-actions, .no-print').forEach(n=> n.remove());
+      clone.querySelectorAll('.viz-grid').forEach(n=> n.style.gridTemplateColumns = '1.4fr 1fr');
+      clone.querySelectorAll('.dash-grid').forEach(n=> n.style.gridTemplateColumns = 'repeat(4,1fr)');
+      clone.querySelectorAll('.chart-card, .matrix-wrap').forEach(n=>{ n.style.overflow='visible'; n.style.boxShadow='none'; });
+      clone.querySelectorAll('table.matrix').forEach(n=> n.style.minWidth='0');
+      host.innerHTML = '';
+      host.appendChild(clone);
+      const canvas = await window.html2canvas(clone, { scale:1.6, backgroundColor:'#ffffff', useCORS:true });
+      let w = maxW, h = canvas.height * w / canvas.width;
+      if(h > maxH){ h = maxH; w = canvas.width * h / canvas.height; }   // 한 장에 들어가도록 비율 유지 축소
+      if(i>0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL('image/jpeg',0.93), 'JPEG', margin + (maxW-w)/2, margin, w, h);
+    }
+    const blob = pdf.output('blob');
+    const filename = `${periodLabel(currentPeriod).replace(/\s+/g,'')}_이행점검_종합현황_${todayStr()}.pdf`;
+    btn.textContent = '저장 중…';
+    await (downloadsCap ? downloadsCap.save({ filename, data: blob }) : browserSave({ filename, data: blob }));
+    btn.textContent = '저장 완료';
+    setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 1500);
+  }catch(err){
+    console.error(err);
+    toast('PDF 생성 중 문제가 발생했습니다. 다시 시도해 주세요.');
+    btn.disabled = false; btn.textContent = original;
+  }finally{
+    if(host.parentNode) host.parentNode.removeChild(host);
+  }
+}
+
 function renderDashboard(){
   const app = document.getElementById('app');
   const rows = siteOrder.map(id=>{
@@ -1153,31 +1395,85 @@ function renderDashboard(){
     cards = `<div class="chart-empty" style="grid-column:1/-1;">아직 등록된 현장이 없습니다. 상단 탭의 "+ 현장"을 눌러 추가해 주세요.</div>`;
   }
 
-  let matrixHead = '<th style="min-width:170px;">평가 항목</th>' + siteOrder.map(id=>`<th>${escapeHtml(siteName(id))}</th>`).join('');
-  let matrixRows = SECTIONS.map(sec=>{
-    let cells = siteOrder.map(id=>{
-      const s = computeRecord(id).sections.find(x=>x.num===sec.num);
-      const b = band(s.pct);
-      return `<td><span class="cell-pct band-${b}">${s.pct===null?'–':Math.round(s.pct)+'%'}</span></td>`;
-    }).join('');
-    return `<tr><td class="rowhead">${sec.num}. ${escapeHtml(sec.title)}</td>${cells}</tr>`;
+  /* 영역별 점수 (현장 × 영역) */
+  const computed = siteOrder.map(id=> computeRecord(id));
+  const areaPct = (siteIdx, secNum)=> computed[siteIdx].sections.find(x=>x.num===secNum).pct;
+  const axes = SECTIONS.map(sec=>({num:sec.num, title:`${sec.num}. ${sec.title}`}));
+  const vizSeries = siteOrder.map((id,i)=>({
+    name: siteName(id), color: siteColor(i),
+    values: SECTIONS.map(sec=> areaPct(i, sec.num)),
+    hasData: computed[i].overall.answered>0
+  })).filter(se=> se.hasData);
+
+  const secAvg = SECTIONS.map(sec=>{
+    const vals = siteOrder.map((_,i)=>areaPct(i,sec.num)).filter(v=>v!==null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  });
+  const overallVals = computed.map(c=>c.overall.pct).filter(v=>v!==null);
+  const overallAvg = overallVals.length ? overallVals.reduce((a,b)=>a+b,0)/overallVals.length : null;
+
+  let matrixHead = '<th style="min-width:170px;">평가 항목</th>' + siteOrder.map(id=>`<th>${escapeHtml(siteName(id))}</th>`).join('') + '<th class="avgcol">현장 평균</th>';
+  const heatTd = (pct, extra='')=> `<td class="heat heat-${band(pct)} ${extra}">${pct===null?'–':Math.round(pct)+'%'}</td>`;
+  let matrixRows = SECTIONS.map((sec,si)=>{
+    const cells = siteOrder.map((_,i)=> heatTd(areaPct(i,sec.num))).join('');
+    return `<tr><td class="rowhead">${sec.num}. ${escapeHtml(sec.title)}</td>${cells}${heatTd(secAvg[si],'avgcol')}</tr>`;
+  }).join('');
+  matrixRows += `<tr class="totalrow"><td class="rowhead">종합 이행률</td>${computed.map(c=>heatTd(c.overall.pct)).join('')}${heatTd(overallAvg,'avgcol')}</tr>`;
+
+  /* 취약 영역: 현장 평균이 낮은 순 3개 */
+  const weak = SECTIONS.map((sec,si)=>({sec, avg:secAvg[si], si})).filter(x=>x.avg!==null).sort((a,b)=>a.avg-b.avg).slice(0,3);
+  const weakHtml = weak.map(w=>{
+    let lowSite=null, lowVal=Infinity;
+    siteOrder.forEach((id,i)=>{ const v=areaPct(i,w.sec.num); if(v!==null && v<lowVal){ lowVal=v; lowSite=id; } });
+    return `<div class="weak-item"><div class="wn">${w.sec.num}. ${escapeHtml(shortTitle(w.sec.title,34))}</div>
+      <div class="wm">현장 평균 ${Math.round(w.avg)}%${lowSite?` · 가장 낮은 현장: ${escapeHtml(siteName(lowSite))} ${Math.round(lowVal)}%`:''}</div></div>`;
   }).join('');
 
   app.innerHTML = `
+    <div class="dash-page" data-page="1">
     <div class="dash-title-row">
       <h2>${escapeHtml(periodLabel(currentPeriod))} 종합 현황</h2>
-      <span class="hint">중대재해처벌법 서류심사 결과 · 현장 ${siteOrder.length}개소</span>
+      <span class="hint">중대재해처벌법 서류심사 결과 · 현장 ${siteOrder.length}개소 · 출력일 ${todayStr()}</span>
+      <span class="dash-actions">
+        <button class="print-btn" id="dashPdfBtn" type="button" title="종합 현황을 A4 3장짜리 PDF 파일로 저장합니다">종합현황 PDF 저장</button>
+        <button class="print-btn" id="dashPrintBtn" type="button" title="종합 현황을 A4로 인쇄합니다">인쇄</button>
+      </span>
     </div>
     <div class="dash-grid">${cards}</div>
     <div class="section-title-row"><h2>현장별 종합 이행률</h2><span class="hint">배점 대비 획득점수 비율(%)</span></div>
     <div class="chart-card">${buildBarChartSvg(rows)}</div>
-    <div class="section-title-row"><h2>항목별 환산점수 비교</h2><span class="hint">13개 항목 · "해당없음" 응답 제외</span></div>
+    <div class="section-title-row"><h2>영역별 비교</h2><span class="hint">13개 영역 · 번호는 아래 표의 항목 번호 · 점선은 양호(80%)·주의(60%) 기준</span></div>
+    <div class="viz-grid">
+      <div class="chart-card">
+        <h3 class="viz-title">영역별 이행률 (꺾은선)</h3><p class="viz-sub">현장별로 어느 영역에서 점수가 떨어지는지 한눈에 비교</p>
+        ${vizSeries.length ? lineChartSvg({labels: SECTIONS.map(s=>String(s.num)), series: vizSeries, xTitle:'영역 번호'}) + legendHtml(vizSeries) : '<div class="chart-empty">입력된 점검 결과가 없습니다.</div>'}
+      </div>
+      <div class="chart-card">
+        <h3 class="viz-title">영역별 균형 (레이더)</h3><p class="viz-sub">바깥쪽일수록 이행률이 높음</p>
+        ${vizSeries.length ? radarChartSvg({axes, series: vizSeries}) + legendHtml(vizSeries) : '<div class="chart-empty">입력된 점검 결과가 없습니다.</div>'}
+      </div>
+    </div>
+    </div>
+    <div class="dash-page pb-before" data-page="2">
+    <div class="section-title-row"><h2>평가 결과 분포</h2><span class="hint">현장별 우수·보통·미흡·해당없음·미응답 문항 수 (총 ${TOTAL_ITEMS}문항)</span></div>
+    <div class="chart-card">${distributionHtml()}</div>
+    ${weakHtml ? `<div class="section-title-row"><h2>우선 보완이 필요한 영역</h2><span class="hint">현장 평균 이행률이 낮은 순 3개 영역</span></div><div class="weak-list">${weakHtml}</div>` : ''}
+    <div class="chart-card" id="trendBox" style="margin-bottom:22px;"><div class="viz-sub" style="margin:0;">반기별 추이를 불러오는 중…</div></div>
+    </div>
+    <div class="dash-page pb-before" data-page="3">
+    <div class="section-title-row"><h2>항목별 환산점수 비교</h2><span class="hint">13개 영역 · "해당없음" 응답 제외 · 80% 이상 양호 / 60% 이상 주의 / 60% 미만 미흡</span></div>
     <div class="matrix-wrap"><table class="matrix"><thead><tr>${matrixHead}</tr></thead><tbody>${matrixRows}</tbody></table></div>
     <p class="foot-note">전체 배점 ${TOTAL_WEIGHT}점(총 ${TOTAL_ITEMS}개 문항, "해당없음" 응답은 배점·점수에서 제외) · 원본 서식 「■ 안전보건 사고예방 확인점검(법적서류 분야)」 기준 · 기간이 바뀌면 각 현장의 점검 기록은 별도로 저장됩니다.</p>
+    </div>
   `;
   app.querySelectorAll('.site-card').forEach(c=>{
     c.addEventListener('click', ()=>{ currentView=c.dataset.view; renderMain(); window.scrollTo({top:0,behavior:'instant'}); });
   });
+  const dpb = document.getElementById('dashPrintBtn');
+  if(dpb) dpb.addEventListener('click', ()=> window.print());
+  const dpdf = document.getElementById('dashPdfBtn');
+  if(dpdf) dpdf.addEventListener('click', saveDashboardPdf);
+  renderTrendInto('trendBox', siteOrder.slice());
 }
 
 /* ====================== RENDER: SITE VIEW ====================== */
