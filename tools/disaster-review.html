@@ -417,7 +417,8 @@ details[open] > summary .sec-chevron{ transform:rotate(90deg); }
 
 /* ---------- dashboard visuals ---------- */
 .viz-grid{ display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-bottom:22px; align-items:stretch; }
-@media screen and (max-width:900px){ .viz-grid{ grid-template-columns:1fr; } }
+@media screen and (max-width:900px){ .viz-grid, .viz-grid.eq{ grid-template-columns:1fr; } }
+.viz-grid.eq{ grid-template-columns:1fr 1fr; }
 .viz-grid .chart-card{ margin-bottom:0; padding-bottom:14px; }
 .dash-actions{ display:inline-flex; gap:8px; margin-left:auto; }
 .viz-title{ font-size:12.5px; font-weight:700; margin:0 0 2px; }
@@ -453,11 +454,16 @@ table.matrix tr.totalrow td{ border-top:2px solid var(--border); font-weight:700
   .site-card, .chart-card, .matrix-wrap, .viz-grid, .weak-item{ break-inside:avoid; box-shadow:none; }
   .dash-grid{ grid-template-columns:repeat(4,1fr); }
   .viz-grid{ grid-template-columns:1.4fr 1fr; }
+  .viz-grid.eq{ grid-template-columns:1fr 1fr; }
   .chart-card{ overflow:visible; }
   .matrix-wrap{ overflow:visible; }
   table.matrix{ min-width:0; }
   .pb-before{ break-before:page; }
   .section-title-row{ break-after:avoid; }
+  .dash-page{ break-inside:avoid; zoom:.9; }
+  .weak-list{ grid-template-columns:repeat(3,1fr); }
+  .weak-item{ font-size:11.5px; }
+  .foot-note{ font-size:10.5px; }
   .no-print{ display:none !important; }
 }
 </style>
@@ -1248,7 +1254,7 @@ function distributionHtml(){
     {k:'low', name:'미흡', color:'var(--low)'}, {k:'na', name:'해당없음', color:'var(--na)'},
     {k:'none', name:'미응답', color:'var(--border)'}
   ];
-  const rowH=30, gap=12, labelW=118, plotW=620, top=4;
+  const rowH=30, gap=12, labelW=104, plotW=400, top=4;
   const rows = siteOrder.map(id=>{
     const d = recordData[recKey(currentPeriod,id)] || {};
     const c = {good:0, mid:0, low:0, na:0, none:0};
@@ -1270,7 +1276,7 @@ function distributionHtml(){
       xx += w;
     });
   });
-  return `<svg viewBox="0 0 ${labelW+plotW+8} ${totalH}" style="width:100%;height:auto;max-width:780px;display:block;">${svg}</svg>`
+  return `<svg viewBox="0 0 ${labelW+plotW+8} ${totalH}" style="width:100%;height:auto;max-width:640px;display:block;">${svg}</svg>`
     + legendHtml(cats.map(c=>({name:c.name, color:c.color})));
 }
 
@@ -1328,7 +1334,7 @@ async function saveDashboardPdf(){
     '--border':'#D7DEE1','--border-soft':'#E5EAEC','--accent':'#1D5673','--accent-soft':'#E3EDF1','--accent-strong':'#0F3A4F',
     '--good':'#1E8A5F','--good-soft':'#E4F3EC','--mid':'#B8790E','--mid-soft':'#FBF0DC','--low':'#C0392B','--low-soft':'#FBE7E4','--na':'#7C8A99','--na-soft':'#EEF1F3','--shadow':'none'};
   const host = document.createElement('div');
-  host.style.cssText = 'position:fixed; left:-99999px; top:0; width:1000px; background:#ffffff; padding:0; font-family:"IBM Plex Sans","Malgun Gothic","Apple SD Gothic Neo",sans-serif; color:#16212B;';
+  host.style.cssText = 'position:fixed; left:-99999px; top:0; width:860px; background:#ffffff; padding:0; font-family:"IBM Plex Sans","Malgun Gothic","Apple SD Gothic Neo",sans-serif; color:#16212B;';
   Object.keys(LIGHT).forEach(k=> host.style.setProperty(k, LIGHT[k]));
   document.body.appendChild(host);
   try{
@@ -1342,7 +1348,7 @@ async function saveDashboardPdf(){
       const clone = pages[i].cloneNode(true);
       clone.classList.remove('pb-before');
       clone.querySelectorAll('.dash-actions, .no-print').forEach(n=> n.remove());
-      clone.querySelectorAll('.viz-grid').forEach(n=> n.style.gridTemplateColumns = '1.4fr 1fr');
+      clone.querySelectorAll('.viz-grid').forEach(n=> n.style.gridTemplateColumns = n.classList.contains('eq') ? '1fr 1fr' : '1.4fr 1fr');
       clone.querySelectorAll('.dash-grid').forEach(n=> n.style.gridTemplateColumns = 'repeat(4,1fr)');
       clone.querySelectorAll('.chart-card, .matrix-wrap').forEach(n=>{ n.style.overflow='visible'; n.style.boxShadow='none'; });
       clone.querySelectorAll('table.matrix').forEach(n=> n.style.minWidth='0');
@@ -1435,13 +1441,21 @@ function renderDashboard(){
       <h2>${escapeHtml(periodLabel(currentPeriod))} 종합 현황</h2>
       <span class="hint">중대재해처벌법 서류심사 결과 · 현장 ${siteOrder.length}개소 · 출력일 ${todayStr()}</span>
       <span class="dash-actions">
-        <button class="print-btn" id="dashPdfBtn" type="button" title="종합 현황을 A4 3장짜리 PDF 파일로 저장합니다">종합현황 PDF 저장</button>
+        <button class="print-btn" id="dashPdfBtn" type="button" title="종합 현황을 A4 2장짜리 PDF 파일로 저장합니다">종합현황 PDF 저장</button>
         <button class="print-btn" id="dashPrintBtn" type="button" title="종합 현황을 A4로 인쇄합니다">인쇄</button>
       </span>
     </div>
     <div class="dash-grid">${cards}</div>
-    <div class="section-title-row"><h2>현장별 종합 이행률</h2><span class="hint">배점 대비 획득점수 비율(%)</span></div>
-    <div class="chart-card">${buildBarChartSvg(rows)}</div>
+    <div class="viz-grid eq" style="margin-top:6px;">
+      <div class="chart-card">
+        <h3 class="viz-title">현장별 종합 이행률</h3><p class="viz-sub">배점 대비 획득점수 비율(%)</p>
+        ${buildBarChartSvg(rows)}
+      </div>
+      <div class="chart-card">
+        <h3 class="viz-title">평가 결과 분포</h3><p class="viz-sub">현장별 우수·보통·미흡·해당없음·미응답 문항 수 (총 ${TOTAL_ITEMS}문항)</p>
+        ${distributionHtml()}
+      </div>
+    </div>
     <div class="section-title-row"><h2>영역별 비교</h2><span class="hint">13개 영역 · 번호는 아래 표의 항목 번호 · 점선은 양호(80%)·주의(60%) 기준</span></div>
     <div class="viz-grid">
       <div class="chart-card">
@@ -1453,14 +1467,10 @@ function renderDashboard(){
         ${vizSeries.length ? radarChartSvg({axes, series: vizSeries}) + legendHtml(vizSeries) : '<div class="chart-empty">입력된 점검 결과가 없습니다.</div>'}
       </div>
     </div>
+    ${weakHtml ? `<div class="section-title-row"><h2>우선 보완이 필요한 영역</h2><span class="hint">현장 평균 이행률이 낮은 순 3개 영역</span></div><div class="weak-list" style="margin-bottom:6px;">${weakHtml}</div>` : ''}
     </div>
     <div class="dash-page pb-before" data-page="2">
-    <div class="section-title-row"><h2>평가 결과 분포</h2><span class="hint">현장별 우수·보통·미흡·해당없음·미응답 문항 수 (총 ${TOTAL_ITEMS}문항)</span></div>
-    <div class="chart-card">${distributionHtml()}</div>
-    ${weakHtml ? `<div class="section-title-row"><h2>우선 보완이 필요한 영역</h2><span class="hint">현장 평균 이행률이 낮은 순 3개 영역</span></div><div class="weak-list">${weakHtml}</div>` : ''}
-    <div class="chart-card" id="trendBox" style="margin-bottom:22px;"><div class="viz-sub" style="margin:0;">반기별 추이를 불러오는 중…</div></div>
-    </div>
-    <div class="dash-page pb-before" data-page="3">
+    <div class="chart-card" id="trendBox" style="margin-bottom:6px;"><div class="viz-sub" style="margin:0;">반기별 추이를 불러오는 중…</div></div>
     <div class="section-title-row"><h2>항목별 환산점수 비교</h2><span class="hint">13개 영역 · "해당없음" 응답 제외 · 80% 이상 양호 / 60% 이상 주의 / 60% 미만 미흡</span></div>
     <div class="matrix-wrap"><table class="matrix"><thead><tr>${matrixHead}</tr></thead><tbody>${matrixRows}</tbody></table></div>
     <p class="foot-note">전체 배점 ${TOTAL_WEIGHT}점(총 ${TOTAL_ITEMS}개 문항, "해당없음" 응답은 배점·점수에서 제외) · 원본 서식 「■ 안전보건 사고예방 확인점검(법적서류 분야)」 기준 · 기간이 바뀌면 각 현장의 점검 기록은 별도로 저장됩니다.</p>
