@@ -443,6 +443,45 @@ const B = "border:1px solid #000;padding:0 8px;vertical-align:middle;";
 const HEAD = "background:#dde8f4;text-align:center;font-weight:bold;letter-spacing:2px;";
 const FONT = "font-family:'맑은 고딕','Malgun Gothic',sans-serif;color:#000;font-size:10pt";
 function nl(s){ return esc(s).replace(/\n/g, "<br>"); }
+/* 공문식 정렬: 1. / 가. / 1) / 가) / (1) / ① / - 로 시작하는 줄은 번호 뒤 글자에 맞춰 둘째 줄부터 들여씀 */
+const MARKS = [
+  [/^(\d{1,2}\.)(?!\d)\s*/, 0], [/^([가나다라마바사아자차카타파하]\.)\s*/, 1], [/^(\d{1,2}\))\s*/, 2], [/^([가나다라마바사아자차카타파하]\))\s*/, 3],
+  [/^(\(\d{1,2}\)|\([가나다라마바사아자차카타파하]\))\s*/, 4], [/^([①-⑳])\s*/, 4], [/^([-·•※▶○■□]|\*)\s*/, -1]
+];
+// 하위 번호는 바로 위 상위 번호의 본문 시작 위치에 맞춰 들여씀
+function markW(mark){ return Math.max(1.25, mark.length * .58 + .4); }
+function makeState(){ return { stack:[], text:0 }; }   // stack: [{lv, text}]
+function lineInfo(line, st){
+  for(const [re, lv] of MARKS){
+    const mm = line.match(re);
+    if(!mm) continue;
+    let ind;
+    if(lv < 0) ind = st.text;                                   // - · ※ : 앞줄 본문에 맞춤
+    else {
+      while(st.stack.length && st.stack[st.stack.length - 1].lv >= lv) st.stack.pop();
+      ind = st.stack.length ? st.stack[st.stack.length - 1].text : 0;
+    }
+    const text = ind + markW(mm[1]);
+    if(lv >= 0) st.stack.push({ lv, text });
+    st.text = text;
+    return { mark:mm[1], rest:line.slice(mm[0].length), ind, w:markW(mm[1]) };
+  }
+  return null;
+}
+function fmt(text, st = makeState()){
+  return String(text || "").split("\n").map(line => {
+    if(!line.trim()) return `<div style="height:.6em"></div>`;
+    const li = lineInfo(line.trim(), st);
+    if(!li) return `<div style="padding-left:${st.text}em">${esc(line.trim())}</div>`;
+    return `<div style="display:flex;padding-left:${li.ind}em"><span style="flex:0 0 ${li.w}em;white-space:nowrap">${esc(li.mark)}</span><span style="flex:1;min-width:0">${esc(li.rest)}</span></div>`;
+  }).join("");
+}
+// 앞 쪽까지 쓴 글(done)을 읽어 들여쓰기 상태를 이어받음 (다음 쪽 첫 줄 정렬용)
+function carryIndent(done){
+  const st = makeState();
+  for(const line of String(done || "").split("\n")) if(line.trim()) lineInfo(line.trim(), st);
+  return st;
+}
 /* A4 한 장(본문 영역 184×269mm)에 맞춘 고정 칸 높이(mm). 글이 넘치면 글자를 줄이고,
    그래도 넘치면 '내용 (계속)' 쪽으로 넘김. 사진은 첫 장에 4장까지, 나머지는 '관련사진 (계속)' 쪽에 6장씩. */
 const PAGE_H = 262, HEAD_H = 22, GAP = 4, ROW_H = 9, SUM_H = 34;
@@ -477,18 +516,17 @@ function firstPage(m, photos, bodyHtml, withPhotos = true){
     <tr style="height:${ROW_H}mm"><td style="${B}${HEAD}">회의종류</td><td style="${B}">${fitBox(ROW_H - .5, esc(m.kind || ""), "display:flex;align-items:center;padding:0")}</td><td style="${B}${HEAD}">일 시</td><td style="${B}">${fitBox(ROW_H - .5, esc(dateLabel(m)), "display:flex;align-items:center;padding:0;font-size:9.5pt")}</td></tr>
     <tr style="height:${ROW_H}mm"><td rowspan="2" style="${B}${HEAD}">참 석 자</td><td rowspan="2" style="${B}">${fitBox(ROW_H * 2 - .5, nl(m.attendees || ""), "display:flex;align-items:center;padding:0")}</td><td style="${B}${HEAD}">작 성 자</td><td style="${B}">${esc(m.writer || "")}</td></tr>
     <tr style="height:${ROW_H}mm"><td style="${B}${HEAD}">장 소</td><td style="${B}">${fitBox(ROW_H - .5, esc(m.place || ""), "display:flex;align-items:center;padding:0")}</td></tr>
-    <tr><td style="${B}${HEAD}">주요내용</td><td colspan="3" style="${B}">${fitBox(SUM_H, nl(m.summary || ""), "display:flex;flex-direction:column;justify-content:center")}</td></tr>
+    <tr><td style="${B}${HEAD}">주요내용</td><td colspan="3" style="${B}">${fitBox(SUM_H, fmt(m.summary || ""), "display:flex;flex-direction:column;justify-content:center")}</td></tr>
     <tr><td style="${B}${HEAD}">내 용</td><td colspan="3" style="${B}vertical-align:top">${fitBox(bodyH, bodyHtml, "")}</td></tr>
     ${withPhotos ? `<tr><td style="${B}${HEAD}">관련사진</td><td colspan="3" style="${B}padding:0 3mm;height:${pH}mm">${photoGrid(photos.slice(0, 4), pH)}</td></tr>` : ""}
   </table></div>`;
 }
-const CONT_TITLE_H = 10;   // '(계속)' 쪽 위 제목줄 높이(mm)
+const CONT_TITLE_H = 0;    // 계속 쪽은 제목줄 없이 바로 표
 // 계속 쪽: 내용 칸(+ 마지막 쪽이면 관련사진 칸)
 function contPage(bodyHtml, photos, label){
   const pH = photos && photos.length ? photoH(photos.length) : 0;
   const bodyH = PAGE_H - CONT_TITLE_H - pH;
   return `<div class="pg" style="${FONT}">
-  <div style="font-size:13pt;font-weight:bold;height:${CONT_TITLE_H - GAP}mm;margin-bottom:${GAP}mm">업무협의 회의록 <span style="font-size:10pt;font-weight:normal">— ${label} (계속)</span></div>
   <table style="width:100%;border-collapse:collapse;table-layout:fixed">
     <colgroup><col style="width:13.3%"><col></colgroup>
     ${bodyHtml != null ? `<tr><td style="${B}${HEAD}">내 용</td><td style="${B}vertical-align:top">${fitBox(bodyH, bodyHtml, "font-size:" + LONG_PT + "pt")}</td></tr>` : ""}
@@ -503,15 +541,15 @@ function shrinkToFit(el){
   return false;
 }
 // box 에 chars 앞부분을 최대한 채우고 몇 글자 들어갔는지 돌려줌 (가능하면 줄 단위로 끊음)
-function fillBox(box, chars){
-  const inner = box.firstElementChild || box;
-  inner.innerHTML = nl(chars.join(""));
+function fillBox(box, chars, done = ""){
+  const inner = box.firstElementChild || box, ci = () => carryIndent(done);
+  inner.innerHTML = fmt(chars.join(""), ci());
   if(!overflows(box)) return chars.length;
   let lo = 0, hi = chars.length;
-  while(lo < hi){ const mid = Math.ceil((lo + hi) / 2); inner.innerHTML = nl(chars.slice(0, mid).join("")); if(overflows(box)) hi = mid - 1; else lo = mid; }
+  while(lo < hi){ const mid = Math.ceil((lo + hi) / 2); inner.innerHTML = fmt(chars.slice(0, mid).join(""), ci()); if(overflows(box)) hi = mid - 1; else lo = mid; }
   let cut = lo; const nlAt = chars.slice(0, lo).lastIndexOf("\n");
   if(nlAt > lo * .6) cut = nlAt + 1;
-  inner.innerHTML = nl(chars.slice(0, cut).join(""));
+  inner.innerHTML = fmt(chars.slice(0, cut).join(""), ci());
   return Math.max(cut, 1);
 }
 async function buildPrint(m, photos){
@@ -522,7 +560,7 @@ async function buildPrint(m, photos){
   const lastBox = () => { const f = area.querySelectorAll(".fit"); return f[f.length - 1]; };
 
   // 1) 사진까지 한 장에 들어가는지 (글자를 최소 MIN_PT 까지 줄여 봄)
-  area.innerHTML = firstPage(m, photos, nl(body), true);
+  area.innerHTML = firstPage(m, photos, fmt(body), true);
   const fits = Array.from(area.querySelectorAll(".fit"));
   fits.slice(0, -1).forEach(shrinkToFit);
   if(shrinkToFit(lastBox())){
@@ -533,9 +571,10 @@ async function buildPrint(m, photos){
     area.innerHTML = firstPage(m, photos, "", false);
     Array.from(area.querySelectorAll(".fit")).slice(0, -1).forEach(shrinkToFit);
     let box = lastBox(); box.style.fontSize = LONG_PT + "pt";
-    let chars = Array.from(body);
-    chars = chars.slice(fillBox(box, chars));
-    while(chars[0] === "\n") chars.shift();
+    const all = Array.from(body);
+    let chars = all, done = "";
+    const take = n => { done += chars.slice(0, n).join(""); chars = chars.slice(n); while(chars[0] === "\n"){ done += "\n"; chars = chars.slice(1); } };
+    take(fillBox(box, chars, done));
     pages.push(area.innerHTML);
     const tailPhotos = photos.slice(0, 4);
     while(chars.length){
@@ -543,12 +582,11 @@ async function buildPrint(m, photos){
       if(tailPhotos.length){
         area.innerHTML = contPage("", tailPhotos, "내용");
         box = area.querySelector(".fit");
-        if(fillBox(box, chars) === chars.length){ pages.push(area.innerHTML); chars = []; break; }
+        if(fillBox(box, chars, done) === chars.length){ pages.push(area.innerHTML); chars = []; break; }
       }
       area.innerHTML = contPage("", null, "내용");
       box = area.querySelector(".fit");
-      chars = chars.slice(fillBox(box, chars));
-      while(chars[0] === "\n") chars.shift();
+      take(fillBox(box, chars, done));
       pages.push(area.innerHTML);
       if(!chars.length && tailPhotos.length) pages.push(contPage(null, tailPhotos, "관련사진"));
     }
