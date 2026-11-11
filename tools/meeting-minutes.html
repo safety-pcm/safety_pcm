@@ -97,6 +97,21 @@
   .ph .x{position:absolute;top:4px;right:4px;border:none;background:rgba(0,0,0,.6);color:#fff;width:26px;height:26px;cursor:pointer;font-size:16px;line-height:1}
   .ph .new{position:absolute;top:4px;left:4px;font-size:11px;background:var(--hazard);color:#fff;padding:1px 6px}
 
+  /* 내용 서식 편집기 */
+  .edbar{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:6px;border:1px solid var(--line);border-bottom:none;background:var(--surface-2)}
+  .edbar button{min-width:32px;height:30px;padding:0 8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;font:600 13px var(--font)}
+  .edbar button:hover{border-color:var(--accent)}
+  .edbar button.on{background:var(--accent-soft);border-color:var(--accent)}
+  .edbar select{width:auto;height:30px;padding:0 6px;font-size:13px}
+  .edbar .sw{min-width:24px;width:24px;height:24px;padding:0;border-radius:50%}
+  .edbar .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+  .edbar[hidden]{display:none}
+  .ed{min-height:220px;max-height:60vh;overflow:auto;padding:10px 12px;background:#fff;color:#000;border:1px solid var(--line);line-height:1.6;font-size:14px;word-break:keep-all;overflow-wrap:anywhere}
+  .ed:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .ed:empty:before{content:attr(data-ph);color:#8a94a3}
+  .ed ol,.ed ul{margin:0;padding-left:1.6em}
+  .ed[contenteditable="false"]{background:var(--surface-2)}
+
   .sticky{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;margin:0 -16px -16px;z-index:5}
   .sticky .sp{flex:1}
   .busy{font-size:12.5px;color:var(--ink-soft);align-self:center}
@@ -164,7 +179,29 @@
 
     <div class="card">
       <h2>내용</h2>
-      <textarea id="fBody" rows="10" placeholder="논의 내용, 지시사항, 후속 조치 등을 적어 주세요."></textarea>
+      <div class="edbar" id="edBar">
+        <button type="button" data-cmd="bold" title="굵게 (Ctrl+B)"><b>가</b></button>
+        <button type="button" data-cmd="underline" title="밑줄 (Ctrl+U)"><u>가</u></button>
+        <select id="edSize" title="글자 크기">
+          <option value="">글자 크기</option><option value="0.9">작게</option><option value="1">보통</option><option value="1.2">크게</option><option value="1.45">아주 크게</option>
+        </select>
+        <span class="sep"></span>
+        <button type="button" class="sw" data-color="#000000" title="검정" style="background:#000000"></button>
+        <button type="button" class="sw" data-color="#c00000" title="빨강" style="background:#c00000"></button>
+        <button type="button" class="sw" data-color="#0050b4" title="파랑" style="background:#0050b4"></button>
+        <button type="button" class="sw" data-color="#2f7d57" title="초록" style="background:#2f7d57"></button>
+        <span class="sep"></span>
+        <button type="button" data-cmd="justifyLeft" title="왼쪽 정렬">왼쪽</button>
+        <button type="button" data-cmd="justifyCenter" title="가운데 정렬">가운데</button>
+        <button type="button" data-cmd="justifyRight" title="오른쪽 정렬">오른쪽</button>
+        <span class="sep"></span>
+        <button type="button" data-cmd="insertOrderedList" title="번호 목록">1. 목록</button>
+        <button type="button" data-cmd="insertUnorderedList" title="글머리 목록">• 목록</button>
+        <span class="sep"></span>
+        <button type="button" data-cmd="removeFormat" title="선택한 글의 서식 지우기">서식 지우기</button>
+      </div>
+      <div id="fBodyEd" class="ed" contenteditable="true" spellcheck="false" data-ph="논의 내용, 지시사항, 후속 조치 등을 적어 주세요."></div>
+      <div class="hint">줄 앞에 1. / 가. / 1) / 가) 처럼 번호를 쓰면 인쇄할 때 공문식으로 들여쓰기가 맞춰집니다.</div>
     </div>
 
     <div class="card">
@@ -289,7 +326,7 @@ $("btnNew").addEventListener("click", () => openEditor(null));
    작성·조회
    ========================================================================= */
 const FIELDS = { kind:"fKind", date:"fDate", start:"fStart", end:"fEnd", place:"fPlace", writer:"fWriter",
-                 attendees:"fAtt", summary:"fSummary", body:"fBody" };
+                 attendees:"fAtt", summary:"fSummary" };
 function blank(){
   return { id:null, kind:"", date:today(), start:"", end:"", place:"", writer:S.name, attendees:"",
            summary:"", body:"" };
@@ -299,6 +336,9 @@ async function openEditor(m){
   S.cur._rm = [];
   S.photos = []; S.dirty = false;
   Object.entries(FIELDS).forEach(([k, id]) => { $(id).value = S.cur[k] || ""; });
+  edLoad(S.cur.bodyHtml != null && S.cur.bodyHtml !== "" ? S.cur.bodyHtml : textToHtml(S.cur.body || ""));
+  $("fBodyEd").contentEditable = canWrite() ? "true" : "false";
+  $("edBar").hidden = !canWrite();
   $("edTitle").textContent = m ? (m.kind || "회의록") + " · " + dateLabel(m).split(" ").slice(0, 3).join(" ") : "새 회의록";
   $("btnDel").hidden = !m || !canDelete();
   $("btnSave").hidden = !canWrite();
@@ -322,6 +362,8 @@ async function openEditor(m){
 function collect(){
   const c = Object.assign({}, S.cur);
   Object.entries(FIELDS).forEach(([k, id]) => { c[k] = $(id).value.trim(); });
+  c.bodyHtml = edHtml();
+  c.body = edPlain();
   return c;
 }
 // 입력칸 높이: 글에 맞춰 늘리되 화면의 60%까지만 (그 이상은 칸 안에서 스크롤 → 커서가 항상 보임)
@@ -342,6 +384,96 @@ function keepVisible(t){
   if(r.bottom > limit) window.scrollBy(0, Math.max(0, Math.min(r.bottom - limit, r.top - 70)));
 }
 document.addEventListener("focusin", e => { if(e.target.matches && e.target.matches("#v-edit textarea")) setTimeout(() => keepVisible(e.target), 50); });
+/* ---------- 내용 서식 편집기 (굵게·밑줄·색·크기·정렬·목록) ---------- */
+const ED = () => $("fBodyEd");
+function textToHtml(t){
+  const lines = String(t || "").replace(/\r/g, "").split("\n");
+  if(lines.length === 1 && !lines[0]) return "";
+  return lines.map(l => `<div>${l ? esc(l) : "<br>"}</div>`).join("");
+}
+// 허용한 태그·서식만 남김 (붙여넣기·저장된 값 모두 이 과정을 거침)
+function sanitize(html){
+  const doc = new DOMParser().parseFromString(`<div>${html || ""}</div>`, "text/html");
+  const root = doc.body.firstElementChild;
+  const ALLOW = { DIV:1, P:1, BR:1, B:1, STRONG:1, U:1, I:1, EM:1, SPAN:1, FONT:1, OL:1, UL:1, LI:1 };
+  (function walk(el){
+    Array.from(el.childNodes).forEach(n => {
+      if(n.nodeType === 3) return;
+      if(n.nodeType !== 1 || /^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|TEMPLATE)$/.test(n.tagName)){ n.remove(); return; }
+      if(!ALLOW[n.tagName]){ walk(n); n.replaceWith(...Array.from(n.childNodes)); return; }
+      const st = n.style, keep = [];
+      if(st){
+        if(st.color) keep.push("color:" + st.color);
+        if(/^[\d.]+em$/.test(st.fontSize)) keep.push("font-size:" + st.fontSize);
+        if(/^(left|center|right|justify)$/.test(st.textAlign)) keep.push("text-align:" + st.textAlign);
+        if(/bold|[6-9]00/.test(st.fontWeight)) keep.push("font-weight:bold");
+        if(/underline/.test(st.textDecoration + " " + st.textDecorationLine)) keep.push("text-decoration:underline");
+      }
+      const fc = n.tagName === "FONT" ? n.getAttribute("color") : null;
+      Array.from(n.attributes).forEach(a => n.removeAttribute(a.name));
+      if(fc && /^(#[0-9a-f]{3,6}|[a-z]+)$/i.test(fc)) keep.push("color:" + fc);
+      if(keep.length) n.setAttribute("style", keep.join(";"));
+      walk(n);
+    });
+  })(root);
+  return root.innerHTML;
+}
+function edLoad(html){ ED().innerHTML = sanitize(html); }
+function edHtml(){ const t = ED().textContent.replace(/[\s\u00a0]/g, ""); return t ? sanitize(ED().innerHTML) : ""; }
+// 검색·목록·한글 파일용 일반 글 (목록은 번호를 붙여서)
+function edPlain(){
+  const c = ED().cloneNode(true);
+  c.querySelectorAll("ol").forEach(o => Array.from(o.children).forEach((li, i) => li.prepend(`${i + 1}. `)));
+  c.querySelectorAll("ul > li").forEach(li => li.prepend("- "));
+  c.contentEditable = "false"; c.style.cssText = "position:absolute;left:-10000px;top:0;width:800px;max-height:none";
+  document.body.appendChild(c);
+  const t = c.innerText.replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  c.remove();
+  return t;
+}
+function edCmd(cmd, val){
+  ED().focus();
+  document.execCommand("styleWithCSS", false, cmd === "foreColor");
+  document.execCommand(cmd, false, val == null ? null : val);
+  document.execCommand("styleWithCSS", false, false);
+  S.dirty = true; edState();
+}
+function edSize(em){
+  ED().focus();
+  document.execCommand("styleWithCSS", false, false);
+  document.execCommand("fontSize", false, "7");
+  ED().querySelectorAll('font[size="7"]').forEach(f => {
+    const sp = document.createElement("span");
+    if(em !== "1") sp.style.fontSize = em + "em";
+    if(f.getAttribute("color")) sp.style.color = f.getAttribute("color");
+    sp.append(...Array.from(f.childNodes)); f.replaceWith(sp);
+  });
+  S.dirty = true;
+}
+function edState(){
+  document.querySelectorAll("#edBar [data-cmd]").forEach(b => {
+    let on = false; try{ on = /^(bold|underline|justify|insert)/.test(b.dataset.cmd) && document.queryCommandState(b.dataset.cmd); }catch(e){}
+    b.classList.toggle("on", !!on);
+  });
+}
+try{ document.execCommand("defaultParagraphSeparator", false, "div"); }catch(e){}
+$("edBar").addEventListener("mousedown", e => { if(e.target.closest("button")) e.preventDefault(); });   // 선택 영역 유지
+$("edBar").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.color) edCmd("foreColor", b.dataset.color);
+  else if(b.dataset.cmd) edCmd(b.dataset.cmd);
+});
+$("edSize").addEventListener("change", e => { if(e.target.value) edSize(e.target.value); e.target.value = ""; });
+ED().addEventListener("input", () => { S.dirty = true; keepVisible(ED()); });
+ED().addEventListener("keyup", edState);
+ED().addEventListener("mouseup", edState);
+ED().addEventListener("focus", () => setTimeout(() => keepVisible(ED()), 50));
+// 붙여넣기는 서식 없이 글자만 (한글·워드의 복잡한 서식이 섞이지 않게)
+ED().addEventListener("paste", e => {
+  e.preventDefault();
+  const t = (e.clipboardData || window.clipboardData).getData("text/plain");
+  document.execCommand("insertText", false, t);
+});
 function growAll(){ requestAnimationFrame(() => document.querySelectorAll("#v-edit textarea").forEach(grow)); }
 $("v-edit").addEventListener("input", e => {
   if(e.target.matches("input,textarea")) S.dirty = true;
@@ -412,7 +544,7 @@ $("btnSave").addEventListener("click", async () => {
     const now = iso(), who = { updatedAt:now, updatedBy:S.user.uid, updatedByName:S.name };
     const ref = c.id ? db.collection("mt_minutes").doc(c.id) : db.collection("mt_minutes").doc();
     const doc = { kind:c.kind, date:c.date, start:c.start, end:c.end, place:c.place, writer:c.writer,
-                  attendees:c.attendees, summary:c.summary, body:c.body,
+                  attendees:c.attendees, summary:c.summary, body:c.body, bodyHtml:c.bodyHtml,
                   photoCount:S.photos.length, ...who };
     if(!c.id){ Object.assign(doc, { createdAt:now, createdBy:S.user.uid, createdByName:S.name }); await ref.set(doc); }
     else await ref.update(doc);
@@ -493,12 +625,6 @@ function fmt(text, st = makeState()){
     return `<div style="display:flex;padding-left:${li.ind}em"><span style="flex:0 0 ${li.w}em;white-space:nowrap">${esc(li.mark)}</span><span style="flex:1;min-width:0">${esc(li.rest)}</span></div>`;
   }).join("");
 }
-// 앞 쪽까지 쓴 글(done)을 읽어 들여쓰기 상태를 이어받음 (다음 쪽 첫 줄 정렬용)
-function carryIndent(done){
-  const st = makeState();
-  for(const line of String(done || "").split("\n")) if(line.trim()) lineInfo(line.trim(), st);
-  return st;
-}
 /* A4 한 장(본문 영역 184×269mm)에 맞춘 고정 칸 높이(mm). 글이 넘치면 글자를 줄이고,
    그래도 넘치면 '내용 (계속)' 쪽으로 넘김. 사진은 첫 장에 4장까지, 나머지는 '관련사진 (계속)' 쪽에 6장씩. */
 const PAGE_H = 262, HEAD_H = 22, GAP = 4, ROW_H = 9, SUM_H = 34;
@@ -557,59 +683,140 @@ function shrinkToFit(el){
   for(let pt = 10; pt >= MIN_PT; pt -= .25){ el.style.fontSize = pt + "pt"; if(!overflows(el)) return true; }
   return false;
 }
-// box 에 chars 앞부분을 최대한 채우고 몇 글자 들어갔는지 돌려줌 (가능하면 줄 단위로 끊음)
-function fillBox(box, chars, done = ""){
-  const inner = box.firstElementChild || box, ci = () => carryIndent(done);
-  inner.innerHTML = fmt(chars.join(""), ci());
-  if(!overflows(box)) return chars.length;
-  let lo = 0, hi = chars.length;
-  while(lo < hi){ const mid = Math.ceil((lo + hi) / 2); inner.innerHTML = fmt(chars.slice(0, mid).join(""), ci()); if(overflows(box)) hi = mid - 1; else lo = mid; }
-  let cut = lo; const nlAt = chars.slice(0, lo).lastIndexOf("\n");
-  if(nlAt > lo * .6) cut = nlAt + 1;
-  inner.innerHTML = fmt(chars.slice(0, cut).join(""), ci());
-  return Math.max(cut, 1);
+/* ---- 인쇄용 내용: 편집기 글을 문단(블록) 단위로 나누고 공문식 들여쓰기를 입힘 ---- */
+function toBlocks(html){
+  const root = document.createElement("div"); root.innerHTML = sanitize(html);
+  const blocks = []; let cur = null;
+  const mk = al => { const d = document.createElement("div"); d._align = al || ""; return d; };
+  const flush = () => { if(cur){ blocks.push(cur); cur = null; } };
+  const isBlock = n => n.nodeType === 1 && /^(DIV|P|OL|UL)$/.test(n.tagName);
+  (function walk(parent, align){
+    Array.from(parent.childNodes).forEach(n => {
+      if(n.nodeType === 1 && n.tagName === "BR"){ if(!cur) cur = mk(align); flush(); return; }
+      if(isBlock(n)){
+        flush();
+        if(n.tagName === "OL" || n.tagName === "UL"){
+          const d = mk(align); d._list = true; const l = n.cloneNode(true); l.setAttribute("style", "margin:0;padding-left:1.6em"); d.appendChild(l); blocks.push(d); return;
+        }
+        const al = (n.style && n.style.textAlign) || align;
+        if(Array.from(n.childNodes).some(isBlock)) walk(n, al);
+        else { const d = mk(al); Array.from(n.childNodes).forEach(x => d.appendChild(x.cloneNode(true))); blocks.push(d); }
+        return;
+      }
+      if(!cur) cur = mk(align);
+      cur.appendChild(n.cloneNode(true));
+    });
+    flush();
+  })(root, "");
+  return blocks;
+}
+function stripPrefix(el, n){
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let t;
+  while(n > 0 && (t = w.nextNode())){ const k = Math.min(n, t.data.length); t.data = t.data.slice(k); n -= k; }
+  const w2 = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  while((t = w2.nextNode())){ const v = t.data.replace(/^[\s\u00a0]+/, ""); t.data = v; if(v) break; }
+}
+function renderBlocks(blocks){
+  const st = makeState();
+  return blocks.map(b => {
+    const text = b.textContent.replace(/\u00a0/g, " ");
+    if(b._list) return `<div class="blk" data-t="${st.text}" style="padding-left:${st.text}em">${b.innerHTML}</div>`;
+    if(!text.trim()) return `<div class="blk sp" style="height:.6em"></div>`;
+    if(b._align === "center" || b._align === "right") return `<div class="blk" data-t="0" style="text-align:${b._align}"><div class="cnt">${b.innerHTML}</div></div>`;
+    const li = lineInfo(text.trim(), st);
+    if(!li) return `<div class="blk" data-t="${st.text}" style="padding-left:${st.text}em"><div class="cnt">${b.innerHTML}</div></div>`;
+    stripPrefix(b, (text.length - text.trimStart().length) + li.mark.length);
+    return `<div class="blk" data-t="${li.ind + li.w}" style="display:flex;padding-left:${li.ind}em"><span style="flex:0 0 ${li.w}em;white-space:nowrap">${esc(li.mark)}</span><div class="cnt" style="flex:1;min-width:0">${b.innerHTML}</div></div>`;
+  }).join("");
+}
+function posAt(el, n){
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let t, last = null;
+  while((t = w.nextNode())){ if(n <= t.data.length) return [t, n]; n -= t.data.length; last = t; }
+  return last ? [last, last.data.length] : [el, el.childNodes.length];
+}
+function cutFrag(el, from, to){
+  const r = document.createRange();
+  if(from == null) r.setStart(el, 0); else r.setStart(...posAt(el, from));
+  if(to == null) r.setEnd(el, el.childNodes.length); else r.setEnd(...posAt(el, to));
+  return r.cloneContents();
+}
+// 넘치는 블록을 글자 단위로 나눔 → [앞부분, 뒷부분] (서식 유지)
+function splitBlock(box, inner, b, force){
+  const cnt = b.querySelector(".cnt") || b, total = cnt.textContent.length;
+  if(total < 2) return null;
+  const build = (frag, tail) => {
+    if(!b.querySelector(".cnt")){ const d = b.cloneNode(false); d.appendChild(frag); return d; }
+    if(!tail){ const d = b.cloneNode(true), c = d.querySelector(".cnt"); c.innerHTML = ""; c.appendChild(frag); return d; }
+    const d = document.createElement("div"); d.className = "blk"; d.dataset.t = b.dataset.t || 0;
+    if(b.style.textAlign) d.style.textAlign = b.style.textAlign; else d.style.paddingLeft = (b.dataset.t || 0) + "em";
+    const c = document.createElement("div"); c.className = "cnt"; c.appendChild(frag); d.appendChild(c); return d;
+  };
+  let lo = 0, hi = total - 1;
+  while(lo < hi){
+    const mid = Math.ceil((lo + hi) / 2), h = build(cutFrag(cnt, null, mid), false);
+    inner.appendChild(h); const over = overflows(box); inner.removeChild(h);
+    if(over) hi = mid - 1; else lo = mid;
+  }
+  if(lo < 1 || (!force && lo < total * .4)) return null;
+  const txt = cnt.textContent, sp = txt.lastIndexOf(" ", lo);
+  const cut = sp > lo - 20 && sp > 0 ? sp + 1 : lo;
+  return [build(cutFrag(cnt, null, cut), false), build(cutFrag(cnt, cut, null), true)];
+}
+// queue(블록 목록)를 box 에 넘치기 직전까지 채움. 남은 블록은 queue 에 남음
+function placeBlocks(box, queue){
+  const inner = box.firstElementChild;
+  while(queue.length){
+    const b = queue[0];
+    if(!inner.childElementCount && b.classList.contains("sp")){ queue.shift(); continue; }
+    inner.appendChild(b);
+    if(!overflows(box)){ queue.shift(); continue; }
+    inner.removeChild(b);
+    const empty = !inner.childElementCount;
+    const parts = splitBlock(box, inner, b, empty);
+    if(parts){ queue.shift(); inner.appendChild(parts[0]); queue.unshift(parts[1]); }
+    else if(empty){ queue.shift(); inner.appendChild(b); }
+    break;
+  }
 }
 async function buildPrint(m, photos){
   const area = $("printArea");
   area.style.cssText = "display:block;position:absolute;left:-10000px;top:0;width:184mm";
-  const body = String(m.body || "").replace(/\r/g, "");
+  const html = m.bodyHtml != null && m.bodyHtml !== "" ? m.bodyHtml : textToHtml(m.body || "");
+  const bodyHtml = renderBlocks(toBlocks(html));
   const pages = [];
   const lastBox = () => { const f = area.querySelectorAll(".fit"); return f[f.length - 1]; };
 
   // 1) 사진까지 한 장에 들어가는지 (글자를 최소 MIN_PT 까지 줄여 봄)
-  area.innerHTML = firstPage(m, photos, fmt(body), true);
-  const fits = Array.from(area.querySelectorAll(".fit"));
-  fits.slice(0, -1).forEach(shrinkToFit);
+  area.innerHTML = firstPage(m, photos, bodyHtml, true);
+  Array.from(area.querySelectorAll(".fit")).slice(0, -1).forEach(shrinkToFit);
   if(shrinkToFit(lastBox())){
     pages.push(area.innerHTML);
     for(let i = 4; i < photos.length; i += 6) pages.push(contPage(null, photos.slice(i, i + 6), "관련사진"));
   }else{
     // 2) 글이 길면: 1쪽은 사진 칸 없이 내용만, 이어지는 쪽에 내용 계속, 사진은 맨 마지막에
+    const tmp = document.createElement("div"); tmp.innerHTML = bodyHtml;
+    let queue = Array.from(tmp.children);
     area.innerHTML = firstPage(m, photos, "", false);
     Array.from(area.querySelectorAll(".fit")).slice(0, -1).forEach(shrinkToFit);
     let box = lastBox(); box.style.fontSize = LONG_PT + "pt";
-    const all = Array.from(body);
-    let chars = all, done = "";
-    const take = n => { done += chars.slice(0, n).join(""); chars = chars.slice(n); while(chars[0] === "\n"){ done += "\n"; chars = chars.slice(1); } };
-    take(fillBox(box, chars, done));
+    placeBlocks(box, queue);
     pages.push(area.innerHTML);
     const tailPhotos = photos.slice(0, 4);
-    while(chars.length){
-      // 남은 글 + 사진이 한 쪽에 들어가면 그 쪽이 마지막
+    let photoPlaced = false;
+    while(queue.length){
       if(tailPhotos.length){
         area.innerHTML = contPage("", tailPhotos, "내용");
         box = area.querySelector(".fit");
-        if(fillBox(box, chars, done) === chars.length){ pages.push(area.innerHTML); chars = []; break; }
+        const trial = queue.map(n => n.cloneNode(true));
+        placeBlocks(box, trial);
+        if(!trial.length){ pages.push(area.innerHTML); queue = []; photoPlaced = true; break; }
       }
       area.innerHTML = contPage("", null, "내용");
       box = area.querySelector(".fit");
-      take(fillBox(box, chars, done));
+      placeBlocks(box, queue);
       pages.push(area.innerHTML);
-      if(!chars.length && tailPhotos.length) pages.push(contPage(null, tailPhotos, "관련사진"));
     }
-    if(!pages.length || (tailPhotos.length && !pages[pages.length - 1].includes("관련사진</td>"))){
-      pages.push(contPage(null, tailPhotos, "관련사진"));
-    }
+    if(tailPhotos.length && !photoPlaced) pages.push(contPage(null, tailPhotos, "관련사진"));
     for(let i = 4; i < photos.length; i += 6) pages.push(contPage(null, photos.slice(i, i + 6), "관련사진"));
   }
   area.style.cssText = "";
