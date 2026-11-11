@@ -467,8 +467,9 @@ function photoGrid(list, h){
   return `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:3mm;padding:2mm 0">${list.map(p =>
     `<div style="text-align:center;min-width:0"><img src="${p.data}" style="width:100%;height:${imgH}mm;object-fit:contain;display:block">${capH ? `<div style="font-size:8.5pt;height:${capH}mm;line-height:${capH}mm;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(p.cap || "")}</div>` : ""}</div>`).join("")}</div>`;
 }
-function firstPage(m, photos, bodyHtml){
-  const pH = photoH(photos.length);
+// withPhotos=false → 사진 칸 없이 내용 칸을 쪽 끝까지 늘림(글이 길어 사진을 마지막 쪽으로 보낼 때)
+function firstPage(m, photos, bodyHtml, withPhotos = true){
+  const pH = withPhotos ? photoH(photos.length) : 0;
   const bodyH = PAGE_H - HEAD_H - GAP - ROW_H * 3 - SUM_H - pH;
   return `<div class="pg" style="${FONT}">${headerHtml("업무협의 회의록")}
   <table style="width:100%;border-collapse:collapse;table-layout:fixed">
@@ -478,64 +479,83 @@ function firstPage(m, photos, bodyHtml){
     <tr style="height:${ROW_H}mm"><td style="${B}${HEAD}">장 소</td><td style="${B}">${fitBox(ROW_H - .5, esc(m.place || ""), "display:flex;align-items:center;padding:0")}</td></tr>
     <tr><td style="${B}${HEAD}">주요내용</td><td colspan="3" style="${B}">${fitBox(SUM_H, nl(m.summary || ""), "display:flex;flex-direction:column;justify-content:center")}</td></tr>
     <tr><td style="${B}${HEAD}">내 용</td><td colspan="3" style="${B}vertical-align:top">${fitBox(bodyH, bodyHtml, "")}</td></tr>
-    <tr><td style="${B}${HEAD}">관련사진</td><td colspan="3" style="${B}padding:0 3mm;height:${pH}mm">${photoGrid(photos.slice(0, 4), pH)}</td></tr>
+    ${withPhotos ? `<tr><td style="${B}${HEAD}">관련사진</td><td colspan="3" style="${B}padding:0 3mm;height:${pH}mm">${photoGrid(photos.slice(0, 4), pH)}</td></tr>` : ""}
   </table></div>`;
 }
-function contPage(label, inner){
+const CONT_TITLE_H = 10;   // '(계속)' 쪽 위 제목줄 높이(mm)
+// 계속 쪽: 내용 칸(+ 마지막 쪽이면 관련사진 칸)
+function contPage(bodyHtml, photos, label){
+  const pH = photos && photos.length ? photoH(photos.length) : 0;
+  const bodyH = PAGE_H - CONT_TITLE_H - pH;
   return `<div class="pg" style="${FONT}">
-  <div style="font-size:13pt;font-weight:bold;margin-bottom:${GAP}mm">업무협의 회의록 <span style="font-size:10pt;font-weight:normal">— ${label} (계속)</span></div>
+  <div style="font-size:13pt;font-weight:bold;height:${CONT_TITLE_H - GAP}mm;margin-bottom:${GAP}mm">업무협의 회의록 <span style="font-size:10pt;font-weight:normal">— ${label} (계속)</span></div>
   <table style="width:100%;border-collapse:collapse;table-layout:fixed">
     <colgroup><col style="width:13.3%"><col></colgroup>
-    <tr><td style="${B}${HEAD}">${label === "내용" ? "내 용" : label}</td><td style="${B}vertical-align:top;padding:0 ${label === "내용" ? "8px" : "3mm"}">${inner}</td></tr>
+    ${bodyHtml != null ? `<tr><td style="${B}${HEAD}">내 용</td><td style="${B}vertical-align:top">${fitBox(bodyH, bodyHtml, "font-size:" + LONG_PT + "pt")}</td></tr>` : ""}
+    ${pH ? `<tr><td style="${B}${HEAD}">관련사진</td><td style="${B}padding:0 3mm;height:${pH}mm">${photoGrid(photos, pH)}</td></tr>` : ""}
   </table></div>`;
 }
-const MIN_PT = 7.5;
+const MIN_PT = 8;      // 한 장에 맞출 때 최소 글자 크기
+const LONG_PT = 9.5;   // 여러 장으로 넘어갈 때 내용 글자 크기
 function overflows(el){ return el.scrollHeight > el.clientHeight + 1; }
 function shrinkToFit(el){
   for(let pt = 10; pt >= MIN_PT; pt -= .25){ el.style.fontSize = pt + "pt"; if(!overflows(el)) return true; }
   return false;
 }
+// box 에 chars 앞부분을 최대한 채우고 몇 글자 들어갔는지 돌려줌 (가능하면 줄 단위로 끊음)
+function fillBox(box, chars){
+  const inner = box.firstElementChild || box;
+  inner.innerHTML = nl(chars.join(""));
+  if(!overflows(box)) return chars.length;
+  let lo = 0, hi = chars.length;
+  while(lo < hi){ const mid = Math.ceil((lo + hi) / 2); inner.innerHTML = nl(chars.slice(0, mid).join("")); if(overflows(box)) hi = mid - 1; else lo = mid; }
+  let cut = lo; const nlAt = chars.slice(0, lo).lastIndexOf("\n");
+  if(nlAt > lo * .6) cut = nlAt + 1;
+  inner.innerHTML = nl(chars.slice(0, cut).join(""));
+  return Math.max(cut, 1);
+}
 async function buildPrint(m, photos){
   const area = $("printArea");
   area.style.cssText = "display:block;position:absolute;left:-10000px;top:0;width:184mm";
   const body = String(m.body || "").replace(/\r/g, "");
-  const extraPhotos = photos.slice(4);
-  area.innerHTML = firstPage(m, photos, nl(body));
+  const pages = [];
+  const lastBox = () => { const f = area.querySelectorAll(".fit"); return f[f.length - 1]; };
+
+  // 1) 사진까지 한 장에 들어가는지 (글자를 최소 MIN_PT 까지 줄여 봄)
+  area.innerHTML = firstPage(m, photos, nl(body), true);
   const fits = Array.from(area.querySelectorAll(".fit"));
-  fits.slice(0, -1).forEach(shrinkToFit);           // 개요·주요내용 칸
-  const bodyBox = fits[fits.length - 1];
-  let rest = "";
-  if(!shrinkToFit(bodyBox)){
-    // 최소 글자 크기에서도 넘침 → 들어가는 만큼만 첫 장에, 나머지는 '내용 (계속)'
-    bodyBox.style.fontSize = MIN_PT + "pt";
-    const chars = Array.from(body);
-    let lo = 0, hi = chars.length;
-    while(lo < hi){ const mid = Math.ceil((lo + hi) / 2); bodyBox.innerHTML = nl(chars.slice(0, mid).join("")); if(overflows(bodyBox)) hi = mid - 1; else lo = mid; }
-    let cut = lo; const nlAt = chars.slice(0, lo).lastIndexOf("\n");
-    if(nlAt > lo * .6) cut = nlAt + 1;                 // 가능하면 줄 단위로 끊기
-    bodyBox.innerHTML = nl(chars.slice(0, cut).join(""));
-    rest = chars.slice(cut).join("").replace(/^\n+/, "");
-  }
-  const firstHtml = area.innerHTML;
-  let pages = [firstHtml];
-  if(rest){
-    area.innerHTML = contPage("내용", fitBox(PAGE_H - 12, "", "font-size:" + MIN_PT + "pt"));
-    const box = area.querySelector(".fit");
-    let chars = Array.from(rest);
+  fits.slice(0, -1).forEach(shrinkToFit);
+  if(shrinkToFit(lastBox())){
+    pages.push(area.innerHTML);
+    for(let i = 4; i < photos.length; i += 6) pages.push(contPage(null, photos.slice(i, i + 6), "관련사진"));
+  }else{
+    // 2) 글이 길면: 1쪽은 사진 칸 없이 내용만, 이어지는 쪽에 내용 계속, 사진은 맨 마지막에
+    area.innerHTML = firstPage(m, photos, "", false);
+    Array.from(area.querySelectorAll(".fit")).slice(0, -1).forEach(shrinkToFit);
+    let box = lastBox(); box.style.fontSize = LONG_PT + "pt";
+    let chars = Array.from(body);
+    chars = chars.slice(fillBox(box, chars));
+    while(chars[0] === "\n") chars.shift();
+    pages.push(area.innerHTML);
+    const tailPhotos = photos.slice(0, 4);
     while(chars.length){
-      let lo = 1, hi = chars.length;
-      box.innerHTML = nl(chars.join(""));
-      if(overflows(box)){
-        while(lo < hi){ const mid = Math.ceil((lo + hi) / 2); box.innerHTML = nl(chars.slice(0, mid).join("")); if(overflows(box)) hi = mid - 1; else lo = mid; }
-      }else lo = chars.length;
-      box.innerHTML = nl(chars.slice(0, lo).join(""));
-      if(lo === chars.length){ box.style.fontSize = ""; shrinkToFit(box); }
+      // 남은 글 + 사진이 한 쪽에 들어가면 그 쪽이 마지막
+      if(tailPhotos.length){
+        area.innerHTML = contPage("", tailPhotos, "내용");
+        box = area.querySelector(".fit");
+        if(fillBox(box, chars) === chars.length){ pages.push(area.innerHTML); chars = []; break; }
+      }
+      area.innerHTML = contPage("", null, "내용");
+      box = area.querySelector(".fit");
+      chars = chars.slice(fillBox(box, chars));
+      while(chars[0] === "\n") chars.shift();
       pages.push(area.innerHTML);
-      chars = chars.slice(lo);
+      if(!chars.length && tailPhotos.length) pages.push(contPage(null, tailPhotos, "관련사진"));
     }
-  }
-  for(let i = 0; i < extraPhotos.length; i += 6){
-    pages.push(contPage("관련사진", photoGrid(extraPhotos.slice(i, i + 6), PAGE_H - 14)));
+    if(!pages.length || (tailPhotos.length && !pages[pages.length - 1].includes("관련사진</td>"))){
+      pages.push(contPage(null, tailPhotos, "관련사진"));
+    }
+    for(let i = 4; i < photos.length; i += 6) pages.push(contPage(null, photos.slice(i, i + 6), "관련사진"));
   }
   area.style.cssText = "";
   area.innerHTML = pages.join("");
