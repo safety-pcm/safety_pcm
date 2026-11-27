@@ -117,6 +117,18 @@
     body>*:not(#printArea){display:none!important}
     #printArea{display:block!important}
   }
+  .pmodal.land .paper,.pmodal.land .pmbar,.pmodal.land .pmhint{max-width:1120px}
+  .pmodal.land .paper{overflow-x:auto}
+  .lgbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .lgbar select{width:auto;min-width:120px}
+  .lgwrap{overflow-x:auto;border:1px solid var(--line);margin-bottom:14px}
+  table.lgt{border-collapse:collapse;width:100%;min-width:1180px;font-size:12px}
+  table.lgt th,table.lgt td{border:1px solid var(--line);padding:5px 6px;vertical-align:top;word-break:break-word}
+  table.lgt th{background:var(--surface-2);font-weight:700;text-align:center;white-space:nowrap}
+  table.lgt td.c{text-align:center;white-space:nowrap}
+  table.lgt.sum{min-width:900px}
+  table.lgt.sum td{text-align:center}
+  .lgh{font-size:13px;font-weight:700;margin:16px 0 6px}
   @media (max-width:560px){.row2{grid-template-columns:1fr}.kv{grid-template-columns:82px 1fr}}
 </style>
 </head>
@@ -133,6 +145,7 @@
   <button class="on" data-v="nm">아차사고 신고</button>
   <button data-v="pt">현장순회점검</button>
   <button data-v="ca">시정조치 <span class="cnt" id="caBadge"></span></button>
+  <button data-v="lg">아차사고 관리대장</button>
 </nav>
 
 <main>
@@ -146,6 +159,11 @@
         <div><label>유형</label><select id="nmType"></select></div>
       </div>
       <label>발생 장소</label><input type="text" id="nmPlace" placeholder="예: 3층 슬라브 단부">
+      <div class="row2">
+        <div><label>공종</label><input type="text" id="nmTrade" placeholder="예: 철근콘크리트"></div>
+        <div><label>협력업체</label><input type="text" id="nmCo" placeholder="해당 협력업체명"></div>
+      </div>
+      <label>신고자 소속</label><input type="text" id="nmOrg" placeholder="예: ○○건설(협력업체) / 현장 직원">
       <label>상황 설명</label><textarea id="nmDesc" placeholder="무슨 일이 있었는지 구체적으로"></textarea>
       <label>즉시 조치사항</label><textarea id="nmAction" placeholder="현장에서 바로 취한 조치"></textarea>
       <label>사진</label><div class="pk" id="nmPk"></div>
@@ -176,6 +194,19 @@
       <h2>점검 이력</h2>
       <div class="filters"><select id="ptFSite"></select></div>
       <div id="ptList"></div>
+    </div>
+  </section>
+
+  <!-- 아차사고 관리대장 -->
+  <section class="view" id="v-lg">
+    <div class="card">
+      <h2>아차사고 관리대장</h2>
+      <div class="lgbar">
+        <select id="lgSite"></select><select id="lgYear"></select>
+        <button class="sbtn pri" id="lgPrint" type="button">관리대장 출력</button>
+      </div>
+      <div class="hint" style="margin:0 0 10px">신고 내용이 사내 관리대장 양식(I-11 붙임 5) 순서대로 자동 정리됩니다. 원인·개선대책·조치기한·위험성평가 반영은 관리자가 각 신고의 상세 화면에서 입력합니다.</div>
+      <div id="lgBody"></div>
     </div>
   </section>
 
@@ -234,7 +265,10 @@ function nowInput(){ const d = new Date(); return `${d.getFullYear()}-${pad(d.ge
 function fmtLocal(s){ const d = new Date(s); return isNaN(d) ? "-" : `${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function daysSince(s){ const d = new Date(s); return isNaN(d) ? 0 : Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000)); }
 
-const NM_TYPES = ["추락위험","협착위험","낙하물","전도위험","화재위험","감전위험","기타"];
+/* 유형·원인 구분 — 현장 서류 캐비넷 10-1-4 '아차사고 관리대장' 양식의 선택 항목과 동일 */
+const NM_TYPES = ["떨어짐","넘어짐","부딪힘","맞음(낙하·비래)","끼임","무너짐","감전","화재·폭발","절단·베임·찔림","장비 충돌·전도","질식·중독","기타"];
+const NM_CAUSES = ["불안전한 상태","불안전한 행동","관리상 결함"];
+const NM_REFLECT = ["반영","해당없음"];
 const CHECKLIST = [
   {cat:"안전통로/개구부", items:["안전통로 확보","개구부 덮개·안전난간 설치"]},
   {cat:"개인보호구",       items:["안전모 착용 상태","고소작업 안전대 착용"]},
@@ -245,7 +279,7 @@ const CHECKLIST = [
 ];
 const MAX_PHOTOS = 8;
 
-const S = { user:null, role:"pending", lv:null, name:"", sites:[], nm:[], pt:[], ca:[], open:new Set(), drafts:{} };
+const S = { user:null, role:"pending", lv:null, name:"", sites:[], nm:[], pt:[], ca:[], open:new Set(), drafts:{}, edits:{} };
 let db = null;
 const photoCache = new Map();
 
@@ -365,18 +399,26 @@ function showDoc(title, clauses, atts){
     atts.forEach((a, i) => { h += `<div class="att"><b>[붙임 ${i+1}] ${esc(a.label)}</b>${a.photos.map(p => `<img src="${p.data}" alt="">`).join("")}</div>`; });
   } else h += `<p style="margin-top:10pt">끝.</p>`;
   h += `<p class="sign">작성자 :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(서명)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;확인자 :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(서명)</p>`;
-  curDoc = h; $("pmBody").innerHTML = h; $("pModal").classList.add("show");
+  showRaw(h, false);
 }
+let curLand = false;
+function showRaw(h, land){
+  curDoc = h; curLand = !!land;
+  $("pmBody").innerHTML = h; $("pModal").classList.toggle("land", curLand); $("pModal").classList.add("show");
+}
+function pageRule(){ return curLand ? "@page{size:A4 landscape;margin:10mm}" : ""; }
 $("pmClose").onclick = () => $("pModal").classList.remove("show");
 $("pmPrint").onclick = () => {
   const a = $("printArea"); a.innerHTML = curDoc;
+  let ps = document.getElementById("pgStyle"); if(!ps){ ps = document.createElement("style"); ps.id = "pgStyle"; document.head.appendChild(ps); }
+  ps.textContent = pageRule();
   Promise.all(Array.from(a.querySelectorAll("img")).map(i => i.decode ? i.decode().catch(()=>{}) : Promise.resolve()))
     .then(() => { try{ window.print(); }catch(e){ alert("이 화면에서는 인쇄 창을 열 수 없습니다. [새 창에서 열기]를 이용해 주세요."); } });
 };
 $("pmWin").onclick = () => {
   const w = window.open("", "_blank");
   if(!w){ alert("새 창이 차단되었습니다. 브라우저의 팝업 허용 후 다시 시도해 주세요."); return; }
-  w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>출력</title><style>@page{margin:18mm}body{margin:0;padding:18mm}${DOC_CSS}</style></head><body class="doc">${curDoc}</body></html>`);
+  w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>출력</title><style>@page{margin:18mm}${pageRule()}body{margin:0;padding:${curLand ? "0" : "18mm"}}${DOC_CSS}${LG_CSS}</style></head><body class="doc">${curDoc}</body></html>`);
   w.document.close(); setTimeout(() => { try{ w.focus(); w.print(); }catch(e){} }, 600);
 };
 
@@ -438,14 +480,37 @@ $("nmSubmit").onclick = async () => {
     await Promise.all(urls.map(data => ref.collection("photos").add({data, createdAt: now})));
     const who = {createdBy: S.user.uid, createdByName: S.name};
     const batch = db.batch();
-    batch.set(ref, {site, type, occurredAt: $("nmTime").value, place: $("nmPlace").value.trim(), desc, action: $("nmAction").value.trim(), photoCount: urls.length, createdAt: now, ...who});
+    batch.set(ref, {site, type, occurredAt: $("nmTime").value, place: $("nmPlace").value.trim(), trade: $("nmTrade").value.trim(), company: $("nmCo").value.trim(), reporterOrg: $("nmOrg").value.trim(), desc, action: $("nmAction").value.trim(), photoCount: urls.length, createdAt: now, ...who});
     batch.set(db.collection("nm_actions").doc(), {site, src:"nm", srcId: ref.id, srcItemIdx: -1, srcLabel: type, issue: `${type} — ${desc.slice(0, 40)}${desc.length > 40 ? "…" : ""}`, status:"open", createdAt: now, afterCount: 0, ...who});
     await batch.commit();
-    ["nmDesc","nmAction","nmPlace"].forEach(id => $(id).value = "");
+    ["nmDesc","nmAction","nmPlace","nmTrade","nmCo","nmOrg"].forEach(id => $(id).value = "");
     $("nmTime").value = nowInput(); nmPicker.clear();
   }catch(e){ onErr(e); alert("저장하지 못했습니다. 잠시 후 다시 시도해 주세요."); }
   finally{ btn.disabled = false; btn.textContent = "신고 제출"; }
 };
+
+const reporterOf = r => [r.reporterOrg, r.createdByName].filter(Boolean).join(" ");
+function ledgerForm(r){
+  const ed = S.edits[r.id] || {}, v = k => esc(ed[k] !== undefined ? ed[k] : (r[k] || ""));
+  const sel = (k, list) => `<select data-f="${k}"><option value=""></option>${list.map(o => `<option${(ed[k] !== undefined ? ed[k] : r[k]) === o ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+  return `<div class="form-in" data-ledger="${r.id}">
+    <div class="hint" style="margin:0 0 8px">관리대장 항목 (관리자 입력)</div>
+    <label>원인 구분</label>${sel("causeType", NM_CAUSES)}
+    <label>원인</label><textarea data-f="cause">${v("cause")}</textarea>
+    <label>개선 대책</label><textarea data-f="measure">${v("measure")}</textarea>
+    <div class="row2"><div><label>조치 담당</label><input type="text" data-f="owner" value="${v("owner")}"></div><div><label>조치 기한</label><input type="date" data-f="dueDate" value="${v("dueDate")}"></div></div>
+    <div class="row2"><div><label>위험성평가 반영</label>${sel("reflect", NM_REFLECT)}</div><div><label>비고</label><input type="text" data-f="remark" value="${v("remark")}"></div></div>
+    <button class="sbtn pri" data-act="nmsave" type="button" style="margin-top:10px">관리대장 항목 저장</button>
+  </div>`;
+}
+async function saveLedger(rid, host){
+  const ed = S.edits[rid]; if(!ed || !Object.keys(ed).length){ alert("변경된 내용이 없습니다."); return; }
+  const btn = host.querySelector("[data-act=nmsave]"); btn.disabled = true; btn.textContent = "저장 중…";
+  try{
+    await db.collection("nm_reports").doc(rid).update({...ed, ledgerAt: iso(), ledgerBy: S.name});
+    delete S.edits[rid];
+  }catch(e){ onErr(e); alert("저장하지 못했습니다. 관리자 권한과 Firestore 보안 규칙(nm_reports 수정)을 확인해 주세요."); btn.disabled = false; btn.textContent = "관리대장 항목 저장"; }
+}
 
 function renderNm(){
   const fs = $("nmFSite").value, fst = $("nmFState").value;
@@ -455,7 +520,8 @@ function renderNm(){
     return `<div class="rec" data-k="nm:${r.id}">
       <button class="rec-h" data-act="toggle"><span><div class="t">${esc(r.site)} · ${esc(r.type)}</div><div class="s">${esc(fmtLocal(r.occurredAt || r.createdAt))}${r.place ? " · " + esc(r.place) : ""}${r.photoCount ? " · 📷 " + r.photoCount : ""}</div></span>${stateTag(a)}</button>
       ${open ? `<div class="rec-b">
-        <dl class="kv"><dt>발생일시</dt><dd>${esc((r.occurredAt || "").replace("T", " ") || "-")}</dd><dt>발생 장소</dt><dd>${esc(r.place || "-")}</dd><dt>상황 설명</dt><dd>${esc(r.desc)}</dd><dt>즉시 조치</dt><dd>${esc(r.action || "-")}</dd><dt>신고자</dt><dd>${esc(r.createdByName || "-")}</dd></dl>
+        <dl class="kv"><dt>발생일시</dt><dd>${esc((r.occurredAt || "").replace("T", " ") || "-")}</dd><dt>발생 장소</dt><dd>${esc(r.place || "-")}</dd><dt>상황 설명</dt><dd>${esc(r.desc)}</dd><dt>공종</dt><dd>${esc(r.trade || "-")}</dd><dt>협력업체</dt><dd>${esc(r.company || "-")}</dd><dt>즉시 조치</dt><dd>${esc(r.action || "-")}</dd><dt>신고자</dt><dd>${esc(reporterOf(r) || "-")}</dd>${canManage() ? "" : `<dt>원인</dt><dd>${esc([r.causeType, r.cause].filter(Boolean).join(" · ") || "-")}</dd><dt>개선 대책</dt><dd>${esc(r.measure || "-")}</dd><dt>조치 기한</dt><dd>${esc(r.dueDate || "-")}</dd>`}</dl>
+        ${canManage() ? ledgerForm(r) : ""}
         <div class="photos" data-photos="nm_reports/${r.id}/photos">${r.photoCount ? "사진 불러오는 중…" : ""}</div>
         <div class="btns"><button class="sbtn" data-act="print">출력</button>${canDelete() ? `<button class="sbtn danger" data-act="del">삭제</button>` : ""}</div>
       </div>` : ""}</div>`;
@@ -597,8 +663,9 @@ async function doPrint(kind, id){
       const r = S.nm.find(x => x.id === id), a = actionOf("nm", id), ph = await loadPhotos(`nm_reports/${id}/photos`);
       showDoc("아차사고 신고서", [
         {label:"현장", value:r.site}, {label:"발생일시", value:(r.occurredAt || "").replace("T", " ") || "-"}, {label:"발생 장소", value:r.place || "-"},
-        {label:"유형", value:r.type}, {label:"상황 설명", value:r.desc}, {label:"즉시 조치사항", value:r.action || "-"},
-        {label:"처리 상태", value:a ? (a.status === "done" ? "조치 완료" : "조치 필요") : "-"}, {label:"신고자", value:r.createdByName || "-"}
+        {label:"공종 / 협력업체", value:`${r.trade || "-"} / ${r.company || "-"}`}, {label:"유형", value:r.type}, {label:"상황 설명", value:r.desc}, {label:"즉시 조치사항", value:r.action || "-"},
+        {label:"원인", value:[r.causeType, r.cause].filter(Boolean).join(" · ") || "-"}, {label:"개선 대책", value:r.measure || "-"}, {label:"조치 담당 / 기한", value:`${r.owner || "-"} / ${r.dueDate || "-"}`},
+        {label:"처리 상태", value:a ? (a.status === "done" ? "조치 완료" : "조치 필요") : "-"}, {label:"신고자", value:reporterOf(r) || "-"}
       ], [{label:"현장 사진", photos:ph}]);
     } else if(kind === "pt"){
       const r = S.pt.find(x => x.id === id), ph = await loadPhotos(`nm_patrols/${id}/photos`);
@@ -664,7 +731,109 @@ function wireList(id, render){
     else if(act === "reopen") reopenAction(S.ca.find(x => x.id === rid));
   });
 }
+$("nmList").addEventListener("input", e => {
+  const el = e.target.closest("[data-f]"), host = e.target.closest("[data-ledger]"); if(!el || !host) return;
+  (S.edits[host.dataset.ledger] = S.edits[host.dataset.ledger] || {})[el.dataset.f] = el.value;
+});
+$("nmList").addEventListener("change", e => {
+  const el = e.target.closest("[data-f]"), host = e.target.closest("[data-ledger]"); if(!el || !host) return;
+  (S.edits[host.dataset.ledger] = S.edits[host.dataset.ledger] || {})[el.dataset.f] = el.value;
+});
+$("nmList").addEventListener("click", e => {
+  const b = e.target.closest("[data-act=nmsave]"); if(!b) return;
+  const host = b.closest("[data-ledger]"); saveLedger(host.dataset.ledger, host);
+});
 wireList("nmList", renderNm); wireList("ptList", renderPt); wireList("caList", renderCa);
+
+
+/* ---------------- 아차사고 관리대장 (캐비넷 10-1-4 / I-11 붙임 5 양식) ---------------- */
+const LG_CSS = `
+.lg{color:#000;background:#fff;font-family:'Noto Sans KR','Malgun Gothic',sans-serif}
+.lg h1{font-size:16pt;font-weight:900;text-align:center;margin:0 0 8pt}
+.lg .top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:5pt;font-size:9pt}
+.lg .sign{border-collapse:collapse}
+.lg .sign td{border:1px solid #000;width:60pt;height:34pt;text-align:center;font-size:8pt;vertical-align:top}
+.lg .sign td.h{height:14pt;vertical-align:middle;background:#eee}
+.lg table.t{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7pt;line-height:1.3}
+.lg table.t th,.lg table.t td{border:1px solid #000;padding:2px 3px;vertical-align:top;word-break:break-all;white-space:pre-wrap}
+.lg table.t th{background:#eee;text-align:center;font-weight:700}
+.lg table.t td.c{text-align:center}
+.lg .note{font-size:7.5pt;margin:4pt 0 0}
+.lg h2{font-size:12pt;font-weight:900;text-align:center;margin:0 0 8pt}
+.lg .pb{page-break-before:always;margin-top:0}
+.lg tr{page-break-inside:avoid}`;
+{ const st = document.createElement("style"); st.textContent = LG_CSS.replace(/\.lg/g, ".lg"); document.head.appendChild(st); }
+
+const ymdOf = s => { const d = new Date(s); return isNaN(d) ? "" : `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+function lgRows(site, year){
+  const today = ymdOf(new Date());
+  return S.nm.filter(r => (!site || r.site === site) && ymdOf(r.createdAt).slice(0, 4) === String(year))
+    .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""))
+    .map((r, i) => {
+      const a = actionOf("nm", r.id), done = !!a && a.status === "done";
+      const status = done ? "완료" : (r.dueDate && today > r.dueDate ? "지연" : "진행");
+      return {no: i + 1, r, a, status, recv: ymdOf(r.createdAt), doneDate: done ? ymdOf(a.doneAt) : ""};
+    });
+}
+function lgSummary(rows){
+  const known = NM_TYPES.slice(), extra = [];
+  rows.forEach(x => { if(x.r.type && !known.includes(x.r.type) && !extra.includes(x.r.type)) extra.push(x.r.type); });
+  const types = known.concat(extra);
+  const m = Array.from({length: 12}, () => ({recv:0, done:0, prog:0, late:0, refl:0, t:Object.fromEntries(types.map(t => [t, 0]))}));
+  rows.forEach(x => {
+    const k = m[+x.recv.slice(5, 7) - 1]; if(!k) return;
+    k.recv++;
+    if(x.status === "완료") k.done++; else if(x.status === "지연") k.late++; else k.prog++;
+    if(x.r.reflect === "반영") k.refl++;
+    if(k.t[x.r.type] !== undefined) k.t[x.r.type]++;
+  });
+  return {types, m};
+}
+function lgSummaryTable(rows, forPrint){
+  const {types, m} = lgSummary(rows);
+  const tot = m.reduce((a, k) => { a.recv += k.recv; a.done += k.done; a.prog += k.prog; a.late += k.late; a.refl += k.refl; types.forEach(t => a.t[t] = (a.t[t] || 0) + k.t[t]); return a; }, {recv:0, done:0, prog:0, late:0, refl:0, t:{}});
+  const cell = v => `<td class="c">${v || ""}</td>`;
+  const head = `<tr><th rowspan="2">월</th><th colspan="5">접수 및 조치</th><th colspan="${types.length}">유 형 별</th></tr><tr><th>접수</th><th>완료</th><th>진행</th><th>지연</th><th>위험성평가<br>반영</th>${types.map(t => `<th>${esc(t)}</th>`).join("")}</tr>`;
+  const body = m.map((k, i) => `<tr><td class="c">${i + 1}월</td>${[k.recv, k.done, k.prog, k.late, k.refl].map(cell).join("")}${types.map(t => cell(k.t[t])).join("")}</tr>`).join("");
+  const foot = `<tr><td class="c"><b>합 계</b></td>${[tot.recv, tot.done, tot.prog, tot.late, tot.refl].map(v => `<td class="c"><b>${v}</b></td>`).join("")}${types.map(t => `<td class="c"><b>${tot.t[t] || 0}</b></td>`).join("")}</tr>
+    <tr><td class="c"><b>조치율</b></td><td class="c" colspan="5"><b>${tot.recv ? Math.round(tot.done / tot.recv * 100) + "%" : "-"}</b></td><td colspan="${types.length}"></td></tr>`;
+  return forPrint ? `<table class="t">${head}${body}${foot}</table>` : `<table class="lgt sum">${head}${body}${foot}</table>`;
+}
+const LG_COLS = [["No",3],["접수일",6],["발생일시",7],["발생장소",7],["공종",5],["협력업체",6],["신고자<br>(소속·성명)",6],["아차사고 내용<br>(어떤 작업 중 무엇이 어떻게)",14],["유형",5],["원인 구분",5],["원 인",8],["개선 대책",8],["조치 담당",5],["조치 기한",6],["조치 완료일",6],["상태",4],["위험성평가<br>반영",5],["확인<br>(안전관리자)",5],["비 고",6]];
+function lgCells(x){
+  const r = x.r, remark = [r.remark, r.action ? "즉시조치: " + r.action : ""].filter(Boolean).join(" / ");
+  return [x.no, x.recv, (r.occurredAt || "").replace("T", " "), r.place, r.trade, r.company, reporterOf(r), r.desc, r.type, r.causeType, r.cause, r.measure, r.owner, r.dueDate, x.doneDate, x.status, r.reflect, "", remark];
+}
+function renderLg(){
+  const sSel = $("lgSite"), ySel = $("lgYear");
+  const names = Array.from(new Set([...S.sites, ...siteNamesInRecords()]));
+  fillSelect(sSel, names, {all:true});
+  if(PREF_SITE && !prefApplied.lgSite && names.includes(PREF_SITE)){ sSel.value = PREF_SITE; prefApplied.lgSite = true; }
+  const years = Array.from(new Set([String(new Date().getFullYear()), ...S.nm.map(r => ymdOf(r.createdAt).slice(0, 4)).filter(Boolean)])).sort().reverse();
+  const prevY = ySel.value; ySel.innerHTML = years.map(y => `<option value="${y}">${y}년</option>`).join(""); if(years.includes(prevY)) ySel.value = prevY;
+  const rows = lgRows(sSel.value, ySel.value);
+  const tbl = rows.length
+    ? `<div class="lgwrap"><table class="lgt"><thead><tr>${LG_COLS.map(c => `<th>${c[0]}</th>`).join("")}</tr></thead><tbody>${rows.map(x => `<tr>${lgCells(x).map((v, i) => `<td${[0,1,2,13,14,15,16].includes(i) ? ' class="c"' : ""}>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
+    : `<div class="empty">${esc(ySel.value)}년 신고 기록이 없습니다.</div>`;
+  $("lgBody").innerHTML = tbl + `<div class="lgh">${esc(ySel.value)}년 아차사고 월별 현황 <span class="s" style="font-weight:400;color:var(--ink-faint)">(접수일 기준 자동 집계)</span></div><div class="lgwrap">${lgSummaryTable(rows, false)}</div>`;
+}
+$("lgSite").onchange = $("lgYear").onchange = renderLg;
+$("lgPrint").onclick = () => {
+  const site = $("lgSite").value, year = $("lgYear").value, rows = lgRows(site, year);
+  if(!rows.length){ alert("출력할 기록이 없습니다."); return; }
+  const colg = `<colgroup>${LG_COLS.map(c => `<col style="width:${c[1]}%">`).join("")}</colgroup>`;
+  const sign = `<table class="sign"><tr><td class="h" rowspan="2" style="width:22pt">결<br>재</td><td class="h">안전관리자</td><td class="h">현장소장</td></tr><tr><td></td><td></td></tr></table>`;
+  const per = 14, pages = [];
+  for(let i = 0; i < rows.length; i += per) pages.push(rows.slice(i, i + per));
+  let h = "";
+  pages.forEach((pg, pi) => {
+    h += `<div class="lg${pi ? " pb" : ""}"><h1>아차사고 관리대장</h1><div class="top"><div>현장명 : ${esc(site || "전체 현장")} &nbsp;&nbsp;(${esc(year)}년)</div>${sign}</div>
+      <table class="t">${colg}<thead><tr>${LG_COLS.map(c => `<th>${c[0]}</th>`).join("")}</tr></thead><tbody>${pg.map(x => `<tr>${lgCells(x).map((v, i) => `<td${[0,1,2,13,14,15,16].includes(i) ? ' class="c"' : ""}>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table>
+      <p class="note">※ 아차사고 : 사고가 발생하였으나 인적 상해, 직업병 또는 재산상 손실로 이어지지 않은 사고. ※ 상태 : 완료일 있음=완료 / 조치기한 경과=지연 / 그 외=진행.</p></div>`;
+  });
+  h += `<div class="lg pb"><h2>${esc(year)}년 아차사고 월별 현황${site ? " — " + esc(site) : ""}</h2>${lgSummaryTable(rows, true)}</div>`;
+  showRaw(h, true);
+};
 
 /* ---------------- 탭 · 시작 ---------------- */
 $("tabs").addEventListener("click", e => {
@@ -675,7 +844,7 @@ $("tabs").addEventListener("click", e => {
 
 { const h = location.hash.slice(1); const tb = document.querySelector('#tabs button[data-v="' + h + '"]'); if(tb) tb.click(); }
 
-function renderAll(){ fillSites(); renderNm(); renderPt(); renderCa(); }
+function renderAll(){ fillSites(); renderNm(); renderPt(); renderCa(); renderLg(); }
 
 async function init(){
   if(!SA || !SA.configured() || !SA.boot()){ banner("Firebase 설정이 없어 이 도구를 사용할 수 없습니다. (firebase-config.js 확인)"); return; }
