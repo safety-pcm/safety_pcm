@@ -199,6 +199,9 @@ button{ font-family:inherit; }
 .soon-card h3{ margin:0 0 6px; font-size:16px; }
 .soon-card p{ margin:0; font-size:12.8px; color:var(--ink-soft); line-height:1.7; }
 .soon-card code{ font-size:11.5px; background:var(--surface-3); padding:1px 6px; border-radius:5px; }
+.soon-cab{ display:inline-block; margin:0 0 10px; font-size:11px; font-weight:700; color:var(--accent); background:var(--accent-soft); border-radius:999px; padding:1px 10px; }
+.soon-docs{ list-style:none; margin:14px 0 0; padding:0; text-align:left; font-size:12.8px; color:var(--ink-soft); border-top:1px solid var(--line); }
+.soon-docs li{ padding:7px 4px; border-bottom:1px solid var(--line); }
 
 /* ---------- 모바일: 왼쪽 메뉴를 서랍으로 ---------- */
 .scrim{ display:none; }
@@ -342,23 +345,58 @@ const $ = id => document.getElementById(id);
 const MODES = {
   site: {
     label: "현장", title: "현장 안전 대시보드", icon: "hardhat",
+    /* 현장 메뉴 = 현장 서류 캐비넷 파일철 번호(5-2 ~ 10-1) 순서.
+       docs : 그 파일철에 들어갈 서류 목록('준비 중' 화면에 표시) — 도구가 만들어지면 url 을 추가하고 docs 는 지워도 됩니다. */
     groups: [
       { label: "", items: [
         { id:"site.home", title:"대시보드", icon:"dash", home:true, key:"dev" } ] },
-      { label: "안전점검", items: [
+      { label: "5-2 · 5-3  조직·협의", items: [
+        { id:"site.org", title:"방침·조직·선임", icon:"idcard", key:"dev", cab:"현장 5-2",
+          docs:["5-2-1 방침 및 목표 사진","5-2-2 현장 안전관리조직도","5-2-3 안전보건총괄책임자 지정서","5-2-4 안전보건관리책임자 선임서","5-2-5 안전관리자·보건관리자 선임서","5-2-6 관리감독자 지정서","5-2-7 업무분장표","5-2-8 안전보건조정자 선임(지정)서"] },
+        { id:"site.part", title:"근로자 협의·참여", icon:"chat", key:"dev", cab:"현장 5-3",
+          docs:["5-3-1 노사협의체 회의록","5-3-2 안전보건협의체 회의록(120억 미만 현장)","5-3-3 종사자 의견청취·작업중지 요청 기록"] } ] },
+      { label: "6  기획", items: [
+        { id:"site.ra",   title:"위험성평가", icon:"shield", key:"dev", cab:"현장 6-1",
+          docs:["6-1-1 최초 위험성평가","6-1-2 수시 위험성평가(공종별)","6-1-3 정기 위험성평가","6-1-4~6 월·주·일 위험성평가","6-1-7 유해위험요인 체크리스트"] },
+        { id:"site.law",  title:"법규·법정 계획서", icon:"book", key:"dev", cab:"현장 6-2",
+          docs:["6-2-1 안전관리계획서","6-2-2 유해위험방지계획서","6-2-3 건설공사 안전보건대장","6-2-4 산업안전보건법령 요지 게시","6-2-5 안전보건관리규정"] },
+        { id:"site.goal", title:"목표·세부추진계획", icon:"chart", key:"dev", cab:"현장 6-3",
+          docs:["6-3-1 현장 안전보건 목표 및 세부추진계획"] } ] },
+      { label: "7  지원", items: [
+        { id:"site.cost", title:"산업안전보건관리비", icon:"file", key:"dev", cab:"현장 7-1",
+          docs:["7-1-1 산업안전보건관리비 사용계획서","7-1-2 산업안전보건관리비 사용내역서(월 1회 본사 보고)"] },
+        { id:"site.edu",    title:"안전교육 일지", icon:"cap", key:"dev", cab:"현장 7-2",
+          docs:["7-2-2 일일 안전교육(TBM) 일지","7-2-3~6 채용 시·정기·특별·작업내용 변경 시 교육일지","7-2-7 MSDS 교육일지","7-2-8 기초안전보건교육 이수증 사본","7-2-9 교육계획서"] },
+        { id:"site.tbm",    title:"TBM 일지", icon:"chat", key:"dev", cab:"현장 7-2",
+          docs:["7-2-2 일일 안전교육(TBM) 일지"] },
+        { id:"site.access", title:"근로자 출입등록", icon:"idcard", key:"dev", cab:"현장 7-2",
+          docs:["신규 입사자 QR 출입등록 — TBM 일지·교육일지와 연동"] },
+        { id:"site.doc",    title:"의사소통·문서관리", icon:"folder", key:"dev", cab:"현장 7-3",
+          docs:["7-3-1 배포 매뉴얼·절차서 및 배포 대장","7-3-2 문서접수·발송 대장, 보존 목록"] } ] },
+      { label: "8  운영", items: [
+        { id:"site.permit", title:"작업허가서·작업계획서", icon:"filecheck", key:"dev", cab:"현장 8-1",
+          docs:["8-1-1 안전작업허가서","8-1-2 작업계획서(굴착기·지게차 등 표준서식)","8-1-3 장비 반입·점검","8-1-4 보호구 지급대장","8-1-5 보건관리(MSDS·건강진단 사후관리)"] },
+        { id:"site.sub",    title:"협력업체 관리", icon:"building", key:"dev", cab:"현장 8-2",
+          docs:["8-2-1 협력업체 안전보건관리계획서","8-2-2 안전수칙 준수 서약서","8-2-3 협력업체 반기 평가표"] },
+        { id:"site.emg",    title:"비상대응", icon:"alert", key:"dev", cab:"현장 8-3",
+          docs:["8-3-1 비상조치계획 및 비상연락망","8-3-2 비상대응훈련 계획 및 결과보고서"] } ] },
+      { label: "9  성과평가", items: [
+        { id:"site.log",    title:"일일안전일지", icon:"note", key:"dev", cab:"현장 9-1",
+          docs:["9-1-1 일일안전일지(안전업무일지)"] },
         { id:"site.patrol", title:"현장순회점검", icon:"check",  key:"nm", url:"tools/near-miss.html", hash:"pt" },
-        { id:"site.nm",     title:"아차사고 신고",  icon:"alert",  key:"nm", url:"tools/near-miss.html", hash:"nm" },
-        { id:"site.ca",     title:"시정조치",       icon:"clip",   key:"nm", url:"tools/near-miss.html", hash:"ca" } ] },
-      { label: "작업관리", items: [
-        { id:"site.permit", title:"작업허가서", icon:"filecheck", key:"dev" },
-        { id:"site.tbm",    title:"TBM 일지",   icon:"chat", key:"dev" } ] },
-      { label: "교육·인원", items: [
-        { id:"site.edu",    title:"안전교육 일지", icon:"cap", key:"dev" },
-        { id:"site.access", title:"근로자 출입등록", icon:"idcard", key:"dev" } ] },
-      { label: "위험성평가", items: [
-        { id:"site.ra", title:"현장 위험성평가", icon:"shield", key:"dev" } ] },
+        { id:"site.mon",    title:"합동점검·월간 실적", icon:"chart", key:"dev", cab:"현장 9-1",
+          docs:["9-1-3 합동 안전보건점검일지","9-1-4 월간 안전보건활동 실적보고서","9-1-6 세부추진계획 이행 기록","9-1-7 안전보건관계자 업무수행 평가표"] },
+        { id:"site.cmp",    title:"준수평가·내부심사", icon:"shield", key:"dev", cab:"현장 9-2 · 9-3",
+          docs:["9-2-1 중처법 반기 이행점검 결과 및 개선조치 결과보고서","9-3-1 내부심사 결과 및 부적합 보고서"] } ] },
+      { label: "10  개선", items: [
+        { id:"site.nm",     title:"아차사고 신고", icon:"alert",  key:"nm", url:"tools/near-miss.html", hash:"nm" },
+        { id:"site.nmlog",  title:"아차사고 관리대장", icon:"file", key:"nm", url:"tools/near-miss.html", hash:"lg" },
+        { id:"site.ca",     title:"시정조치", icon:"clip",   key:"nm", url:"tools/near-miss.html", hash:"ca" },
+        { id:"site.acc",    title:"재해 발생 보고·조사", icon:"file", key:"dev", cab:"현장 10-1",
+          docs:["10-1-1 중대재해 발생 보고","10-1-2 재해조사 결과·재발방지 대책 보고서","10-1-3 산업재해조사표 사본"] } ] },
       { label: "서류", items: [
-        { id:"site.docs", title:"현장 서류함", icon:"folder", key:"dev" } ] }
+        { id:"site.docs", title:"현장 서류 캐비넷", icon:"folder", key:"dev", cab:"전체",
+          docs:["파일철 15개 전체를 번호순으로 열람하고, 스캔·사진 서류를 파일철별로 보관"] } ] }
     ]
   },
   hq: {
@@ -367,7 +405,7 @@ const MODES = {
       { label: "", items: [
         { id:"hq.home", title:"대시보드", icon:"dash", home:true, key:"dev" } ] },
       { label: "현장 관리", items: [
-        { id:"hq.sites",   title:"현장 등록·현황", icon:"building", key:"dev" },
+        { id:"hq.sites",   title:"현장 등록·현황", icon:"building", key:"dev", url:"tools/site-registry.html" },
         { id:"hq.compare", title:"현장 비교",      icon:"chart", key:"dev" } ] },
       { label: "점검·심사", items: [
         { id:"hq.report", title:"본사점검 보고서 관리",      icon:"file",  key:"hq", url:"tools/hq-report.html" },
@@ -544,7 +582,9 @@ function selectItem(id){
     const open = $("tbOpen"); open.href = item.url + (mode === "site" && state.site ? "?site=" + encodeURIComponent(state.site) : "") + tail; open.hidden = false;
   } else {
     $("tbTitle").textContent = item.title;
-    $("viewSoon").innerHTML = `<div class="soon-card"><div class="ic">${icon(item.icon)}</div><h3>${esc(item.title)}</h3><p>아직 만들어지지 않은 메뉴입니다.<br>도구 파일을 <code>tools/</code> 폴더에 올리고 이 메뉴 항목에 <code>url</code> 한 줄만 추가하면 이 자리에 열립니다.</p></div>`;
+    const docsHtml = item.docs && item.docs.length
+      ? `<ul class="soon-docs">${item.docs.map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : "";
+    $("viewSoon").innerHTML = `<div class="soon-card"><div class="ic">${icon(item.icon)}</div><h3>${esc(item.title)}</h3>${item.cab ? `<div class="soon-cab">${esc(item.cab)} 파일철</div>` : ""}<p>아직 만들어지지 않은 메뉴입니다.${docsHtml ? "<br>이 자리에 아래 서류가 들어갈 예정입니다." : ""}</p>${docsHtml}</div>`;
     $("viewSoon").hidden = false;
   }
   renderSide();
