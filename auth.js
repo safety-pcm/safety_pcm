@@ -20,7 +20,7 @@
   //     nm  공개용 값 →  hq:"write"  field:"write"  reader:"read"
   //     dev 공개용 값 →  원하는 등급에 "read" 를 넣으면 대시보드·준비 중 메뉴가 보입니다.
   var PERMS = {
-    admin:   { hq:"delete", dr:"delete", ra:"delete", nm:"delete", mt:"delete", dev:"delete" },
+    admin:   { hq:"delete", dr:"delete", ra:"delete", nm:"delete", mt:"delete", dev:"delete", dl:"delete", tb:"delete", rk:"delete", wp:"delete" },
     hq:      { hq:"write",  dr:"write",  ra:null,     nm:null,     mt:null,     dev:null     },
     field:   { hq:"read",   dr:null,     ra:null,     nm:null,     mt:null,     dev:null     },
     reader:  { hq:"read",   dr:"read",   ra:null,     nm:null,     mt:null,     dev:null     },
