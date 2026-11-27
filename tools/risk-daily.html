@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>중점관리 위험요인 일일점검표</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<script>window.TOOL_KEY = "rk";</script>
+<script src="../auth.js"></script>
+<script src="field-lib.js"></script>
+</head>
+<body>
+<script>
+/* =========================================================================
+   중점관리 위험요인 일일점검표 (도구 키: rk) — P-05 붙임 4 / 캐비넷 6-1-4~6-1-6
+   - 컬렉션 rk_checks : 현장·협력업체·점검기간(주간) 1건 = 문서 1개
+   - 확정된 위험요인(상·중 등급)을 입력하고, 7일간 매일 항목별 ○/× 를 점검합니다.
+   - 점검 주체 3종: 협력업체 담당자(상·중 전체) / 관리감독자(상) / 안전관리자(상)
+   - 사진은 photos 하위 컬렉션에 {key:"역할|항목번호", data} 로 저장
+   ========================================================================= */
+FL.start({
+  key: "rk", title: "중점관리 위험요인 일일점검표",
+  tabs: [["w", "작성"], ["l", "작성 목록"]],
+  hashMap: { rk: "w" },
+  onReady(ctx){
+    const { db } = ctx, $ = FL.$, esc = FL.esc, COL = "rk_checks";
+    const ROLES = [["co", "협력업체 담당자", "협력업체 담당자", "상·중 등급"], ["sup", "관리감독자", "관리감독자", "상 등급"], ["sf", "안전관리자", "안전관리자", "상 등급"]];
+    const blankRisk = g => ({ grade: g || "상", hazard: "", measure: "", place: "" });
+    const blankRole = () => ({ name: "", days: {} });  /* days["i_d"] = "○" | "×" */
+    const blank = () => {
+      const from = FL.today();
+      return { site: FL.siteList[0] || "", company: "", round: "", from, to: FL.addDays(from, 6),
+        risks: [blankRisk("상"), blankRisk("상"), blankRisk("중")], co: blankRole(), sup: blankRole(), sf: blankRole(), role: "co" };
+    };
+    let F = blank(), editId = null, picker = null, docs = [];
+    const pics = {};   /* "role|i" -> [dataURL] */
+    const dayList = () => Array.from({ length: 7 }, (_, d) => FL.addDays(F.from, d));
+    const targets = role => F.risks.map((r, i) => ({ r, i })).filter(x => role === "co" ? (x.r.hazard || x.r.measure) : (x.r.grade === "상" && (x.r.hazard || x.r.measure)));
+
+    function renderForm(){
+      const ro = !ctx.canWrite();
+      const role = F.role, R = F[role], dl = dayList(), tg = targets(role);
+      $("v-w").innerHTML = `<div class="card"><h2>${editId ? "점검표 수정" : "점검표 작성"}</h2>
+        <div class="row3"><div><label>현장</label>${FL.sel("site", F.site, FL.siteList, false, ro)}</div><div><label>협력업체명</label>${FL.inp("company", F.company, {ro})}</div><div><label>회차 (월 / 회차)</label>${FL.inp("round", F.round, {ph:"예: 11월 4회차", ro})}</div></div>
+        <div class="row2"><div><label>점검기간 시작</label>${FL.inp("from", F.from, {type:"date", ro})}</div><div><label>점검기간 종료</label>${FL.inp("to", F.to, {type:"date", ro})}</div></div>
+        <h3>□ 확정된 위험요인 <span style="font-weight:400;color:var(--ink-faint)">(수시 위험성평가 회의 결과)</span></h3>
+        <div class="rows">${F.risks.map((r, i) => `<div class="rrow" style="grid-template-columns:70px 1.4fr 1.4fr 1fr auto">
+          ${FL.sel(`risks.${i}.grade`, r.grade, ["상", "중"], false, ro)}
+          <input type="text" data-k="risks.${i}.hazard" value="${esc(r.hazard)}" placeholder="${i + 1}. 확정된 위험요인"${ro ? " readonly" : ""}>
+          <input type="text" data-k="risks.${i}.measure" value="${esc(r.measure)}" placeholder="확정된 감소대책"${ro ? " readonly" : ""}>
+          <input type="text" data-k="risks.${i}.place" value="${esc(r.place)}" placeholder="작업위치"${ro ? " readonly" : ""}>
+          ${ro ? "" : `<button class="sbtn x wr" type="button" data-act="rDel" data-i="${i}">삭제</button>`}</div>`).join("")}</div>
+        ${ro ? "" : `<div class="btns"><button class="sbtn wr" type="button" data-act="rAdd">+ 위험요인 추가</button></div>`}
+
+        <h3>□ 일일 이행 확인 <span style="font-weight:400;color:var(--ink-faint)">(○ 양호 / × 미흡)</span></h3>
+        <div class="seg" id="roleSeg" style="margin-bottom:10px">${ROLES.map(x => `<button type="button" data-role="${x[0]}" class="${role === x[0] ? "on n" : ""}">${x[1]}</button>`).join("")}</div>
+        <div class="row2"><div><label>작성자 (${esc(ROLES.find(x => x[0] === role)[1])}) 성명</label>${FL.inp(`${role}.name`, R.name, {ro})}</div><div><label>확인 대상</label><input type="text" value="${esc(ROLES.find(x => x[0] === role)[3])}" readonly></div></div>
+        ${tg.length ? tg.map(({ r, i }) => `<div class="card" style="margin:10px 0 0;padding:10px">
+          <b>${i + 1}. [${esc(r.grade)}] ${esc(r.hazard || "(위험요인 미입력)")}</b>
+          <div style="overflow-x:auto;margin-top:6px"><table style="border-collapse:collapse;font-size:12px"><tr>${dl.map(d => `<th style="padding:2px 4px;color:var(--ink-soft);font-weight:600">${d.slice(5).replace("-", "/")}<br>(${FL.dow(d)})</th>`).join("")}</tr>
+          <tr>${dl.map((d, di) => `<td style="padding:2px 3px;text-align:center">${FL.segHtml(`${role}.days.${i}_${di}`, R.days[`${i}_${di}`] || "", [["○", "g"], ["×", "b"]], ro)}</td>`).join("")}</tr></table></div>
+          <div style="margin-top:6px;font-size:12.5px;color:var(--ink-soft)">이행 사진</div><div class="pk" data-pk="${role}|${i}"></div></div>`).join("") : `<div class="empty">점검 대상(${role === "co" ? "위험요인을 입력" : "상 등급 위험요인을 입력"})이 없습니다.</div>`}
+        ${ro ? "" : `<button class="primary wr" id="btnSave" type="button">${editId ? "수정 저장" : "점검표 저장"}</button>
+        <div class="btns"><button class="sbtn wr" type="button" data-act="print">3종 미리보기·출력</button><button class="sbtn wr" type="button" data-act="new">새 점검표</button></div>`}
+        <div class="hint">역할 버튼을 눌러 협력업체 담당자 → 관리감독자 → 안전관리자 순으로 각각 입력하세요. 저장은 3종 모두 한 번에 됩니다.</div>
+      </div>`;
+      document.querySelectorAll("#v-w [data-pk]").forEach(m => {
+        const k = m.dataset.pk; pics[k] = pics[k] || [];
+        FL.makePicker(m, pics[k], 3); if(ro) m.style.display = "none";
+      });
+    }
+    FL.bind($("v-w"), () => F, k => { if(k === "from"){ F.to = FL.addDays(F.from, 6); renderForm(); } });
+    FL.bindSeg($("v-w"), () => F, () => { const y = window.scrollY; renderForm(); window.scrollTo(0, y); });
+    /* 위험요인·등급 입력을 마치면(포커스 이동 시) 아래 점검 대상 목록을 갱신 */
+    $("v-w").addEventListener("change", e => {
+      const k = e.target.dataset && e.target.dataset.k;
+      if(k && /^risks\.\d+\.(hazard|measure|grade)$/.test(k)){ const y = window.scrollY; renderForm(); window.scrollTo(0, y); }
+    });
+    $("v-w").addEventListener("click", e => {
+      const rb = e.target.closest("#roleSeg button"); if(rb){ F.role = rb.dataset.role; renderForm(); return; }
+      if(e.target.id === "btnSave"){ save(); return; }
+      const b = e.target.closest("[data-act]"); if(!b) return;
+      const a = b.dataset.act, i = +b.dataset.i;
+      if(a === "rAdd"){ F.risks.push(blankRisk("중")); renderForm(); }
+      else if(a === "rDel"){ if(F.risks.length > 1){ F.risks.splice(i, 1); /* 판정 키가 항목 번호를 쓰므로 초기화 */ ROLES.forEach(x => { F[x[0]].days = {}; }); Object.keys(pics).forEach(k => delete pics[k]); alert("항목 번호가 바뀌어 일일 판정과 사진이 초기화되었습니다."); renderForm(); } }
+      else if(a === "new"){ if(confirm("작성 중인 내용을 지우고 새 점검표를 시작할까요?")){ F = blank(); editId = null; Object.keys(pics).forEach(k => delete pics[k]); renderForm(); } }
+      else if(a === "print") FL.showDoc(docHtml(F, flatPhotos()), false);
+    });
+    const flatPhotos = () => { const o = []; Object.keys(pics).forEach(k => pics[k].forEach(d => o.push({ key:k, data:d }))); return o; };
+
+    async function save(){
+      if(!ctx.canWrite()) return;
+      if(!F.site){ alert("현장을 선택해 주세요. 등록된 현장이 없다면 본사 메뉴의 현장 등록에서 먼저 등록해야 합니다."); return; }
+      if(!F.company.trim()){ alert("협력업체명을 입력해 주세요."); return; }
+      if(!F.risks.some(r => r.hazard.trim())){ alert("확정된 위험요인을 1개 이상 입력해 주세요."); return; }
+      const btn = $("btnSave"); btn.disabled = true; btn.textContent = "저장 중…";
+      try{
+        const ref = editId ? db.collection(COL).doc(editId) : db.collection(COL).doc();
+        const prev = docs.find(x => x.id === ref.id), { role, ...data } = FL.clone(F);
+        const all = flatPhotos();
+        await ref.set({ ...data, photoCount: all.length, createdAt: (prev && prev.createdAt) || FL.iso(), createdByName: (prev && prev.createdByName) || ctx.name, updatedAt: FL.iso(), updatedByName: ctx.name });
+        await FL.replacePhotos(db, ref, all);
+        editId = ref.id; FL.banner(""); renderForm(); alert("저장했습니다.");
+      }catch(e){ FL.onErr(e); alert("저장하지 못했습니다. 잠시 후 다시 시도해 주세요."); btn.disabled = false; btn.textContent = editId ? "수정 저장" : "점검표 저장"; }
+    }
+    async function openDoc(id){
+      const l = docs.find(x => x.id === id); if(!l) return;
+      const { id: _i, photoCount, createdAt, createdByName, updatedAt, updatedByName, ...rest } = l;
+      F = Object.assign(blank(), FL.clone(rest)); F.role = "co"; editId = id;
+      Object.keys(pics).forEach(k => delete pics[k]);
+      try{ (await FL.loadPhotos(db, `${COL}/${id}/photos`)).forEach(p => { (pics[p.key] = pics[p.key] || []).push(p.data); }); }catch(e){ FL.onErr(e); }
+      renderForm(); FL.show("w");
+    }
+
+    /* ---------- 출력: 협력업체 / 관리감독자 / 안전관리자 3쪽 ---------- */
+    function docHtml(L, photos){
+      const n = v => (v === "" || v == null) ? "" : esc(v);
+      const days = Array.from({ length: 7 }, (_, d) => FL.addDays(L.from, d));
+      const period = `${(L.from || "").replace(/-/g, ".")} ~ ${(L.to || "").replace(/-/g, ".")}`;
+      return ROLES.map((ro, ri) => {
+        const R = L[ro[0]] || {}, list = (L.risks || []).map((r, i) => ({ r, i })).filter(x => (x.r.hazard || x.r.measure) && (ro[0] === "co" || x.r.grade === "상"));
+        const risks = (L.risks || []).map((r, i) => ({ r, i })).filter(x => (x.r.hazard || x.r.measure) && (ro[0] === "co" || x.r.grade === "상"));
+        return `<div class="fm ${ri ? "pb" : ""}"><h1 style="font-size:15pt;letter-spacing:1pt">${n(L.round) || "&nbsp;&nbsp;월 &nbsp;&nbsp;회차"} 중점관리 위험요인 일일점검표<br><span style="font-size:11pt;letter-spacing:0">(${ro[1]})</span></h1>
+        <div class="meta"><div></div>${FL.signBox(["협력업체 담당자", "공사팀장", "안전보건총괄책임자"])}</div>
+        <table><tr><th style="width:12%">현장명</th><td>${n(L.site)}</td><th style="width:14%">협력업체명</th><td>${n(L.company)}</td><th style="width:12%">점검기간</th><td>${esc(period)}</td></tr>
+          <tr><th>작성자</th><td>${ro[1]}</td><th>성명</th><td>${n(R.name)}</td><th>확인 대상</th><td>${ro[3]}</td></tr></table>
+        <div class="sec">□ 확정된 위험요인 (수시 위험성평가 회의 결과)</div>
+        <table><tr><th style="width:5%">NO</th><th style="width:7%">등급</th><th style="width:34%">확정된 위험요인</th><th>확정된 감소대책</th><th style="width:16%">작업위치</th></tr>
+          ${(risks.length ? risks : [{ r:{}, i:0 }]).map(({ r, i }) => `<tr><td class="c">${i + 1}</td><td class="c">${n(r.grade)}</td><td>${n(r.hazard)}</td><td>${n(r.measure)}</td><td>${n(r.place)}</td></tr>`).join("")}</table>
+        <div class="sec">□ 일일 이행 확인 (매일 사진 첨부 후 판정 선택: ○ 양호 / × 미흡)</div>
+        <table><tr><th style="width:5%">NO</th><th style="width:7%">등급</th><th style="width:9%">구분</th>${days.map(d => `<th>${d.slice(5).replace("-", "/")}<br>(${FL.dow(d)})</th>`).join("")}</tr>
+          ${risks.map(({ r, i }) => { const ph = photos.filter(p => p.key === `${ro[0]}|${i}`);
+            return `<tr><td class="c" rowspan="2">${i + 1}</td><td class="c" rowspan="2">${n(r.grade)}</td><td class="c">이행 사진</td><td colspan="7" style="font-size:8pt">${ph.length ? `사진 ${ph.length}장 첨부 (뒷면)` : ""}</td></tr>
+            <tr><td class="c">판정</td>${days.map((d, di) => `<td class="c"><b>${n((R.days || {})[`${i}_${di}`])}</b></td>`).join("")}</tr>`; }).join("")}</table>
+        ${(() => { const ph = photos.filter(p => p.key.startsWith(ro[0] + "|")); return ph.length ? `<div class="sec">※ 이행 사진 (${ro[1]})</div><div class="ph">${ph.map(p => `<div><img src="${p.data}" alt=""><div>${(+p.key.split("|")[1]) + 1}번 위험요인</div></div>`).join("")}</div>` : ""; })()}
+        </div>`; }).join("");
+    }
+
+    /* ---------- 목록 ---------- */
+    const open = new Set();
+    function renderList(){
+      const host = $("v-l");
+      if(!host.dataset.built){
+        host.dataset.built = "1";
+        host.innerHTML = `<div class="card"><h2>작성한 점검표</h2><div class="filters"><select id="lSite"></select></div><div id="lList"></div></div>`;
+        $("lSite").onchange = renderList;
+        $("lList").addEventListener("click", async e => {
+          const b = e.target.closest("[data-act]"); if(!b) return; const id = b.closest(".rec").dataset.id;
+          if(b.dataset.act === "toggle"){ open.has(id) ? open.delete(id) : open.add(id); renderList(); }
+          else if(b.dataset.act === "edit") openDoc(id);
+          else if(b.dataset.act === "print"){ try{ const ph = await FL.loadPhotos(db, `${COL}/${id}/photos`); FL.showDoc(docHtml(docs.find(x => x.id === id), ph), false); }catch(err){ FL.onErr(err); alert("출력할 자료를 불러오지 못했습니다."); } }
+          else if(b.dataset.act === "del"){ if(!confirm("이 점검표와 사진을 삭제할까요? 되돌릴 수 없습니다.")) return; try{ await FL.deleteDoc(db, COL, id); if(editId === id){ F = blank(); editId = null; renderForm(); } }catch(err){ FL.onErr(err); alert("삭제하지 못했습니다."); } }
+        });
+      }
+      FL.fillSite($("lSite"), true);
+      const fs = $("lSite").value, rows = docs.filter(l => !fs || l.site === fs);
+      $("lList").innerHTML = rows.length ? rows.map(l => {
+        const cnt = ROLES.map(x => Object.values((l[x[0]] || {}).days || {}).filter(v => v === "×").length).reduce((a, b) => a + b, 0), o = open.has(l.id);
+        return `<div class="rec" data-id="${esc(l.id)}"><button class="rec-h" data-act="toggle"><span><div class="t">${esc(l.site)} · ${esc(l.company)}${l.round ? " · " + esc(l.round) : ""}</div><div class="s">${esc(l.from)} ~ ${esc(l.to)} · 위험요인 ${(l.risks || []).filter(r => r.hazard).length}건${l.photoCount ? " · 📷 " + l.photoCount : ""}</div></span>${cnt ? `<span class="tag bad">미흡 ${cnt}</span>` : `<span class="tag good">미흡 없음</span>`}</button>
+          ${o ? `<div class="rec-b"><div class="btns"><button class="sbtn" data-act="print">출력</button>${ctx.canWrite() ? `<button class="sbtn pri" data-act="edit">수정</button>` : ""}${ctx.canDelete() ? `<button class="sbtn danger" data-act="del">삭제</button>` : ""}</div></div>` : ""}</div>`;
+      }).join("") : `<div class="empty">작성한 점검표가 없습니다.</div>`;
+    }
+
+    renderForm(); renderList();
+    FL.onSites(() => {
+      if(!editId && !FL.siteList.includes(F.site)) F.site = FL.siteList[0] || "";
+      const a = document.activeElement; if(!(a && a.closest && a.closest("#v-w") && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) renderForm();
+      renderList();
+    });
+    db.collection(COL).orderBy("from", "desc").limit(300).onSnapshot(s => { docs = s.docs.map(d => ({ id: d.id, ...d.data() })); FL.banner(""); renderList(); }, FL.onErr);
+  }
+});
+</script>
+</body>
+</html>

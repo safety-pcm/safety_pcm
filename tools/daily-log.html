@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>일일 안전보건일지</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<script>window.TOOL_KEY = "dl";</script>
+<script src="../auth.js"></script>
+<script src="field-lib.js"></script>
+</head>
+<body>
+<script>
+/* =========================================================================
+   일일 안전보건일지  (도구 키: dl)  — 현장 서류 캐비넷 9-1-1 / P-11 붙임 1 양식
+   - 저장 컬렉션: dl_logs (문서 ID = 일자_현장)  · 사진은 photos 하위 컬렉션
+   - 같은 현장·같은 날짜의 일지는 1건으로 관리합니다(다시 저장하면 수정).
+   - 재해자 주민등록번호는 개인정보 보호를 위해 입력받지 않습니다(양식의 해당 칸은 출력 후 직접 기재).
+   ========================================================================= */
+FL.start({
+  key: "dl", title: "일일 안전보건일지",
+  tabs: [["w", "작성"], ["l", "작성 목록"]],
+  onReady(ctx){
+    const { db } = ctx, $ = FL.$, esc = FL.esc, COL = "dl_logs";
+    const INSP = [
+      ["개인보호구", "개인보호구 착용"],
+      ["공도구", "작업 전·후 점검, 접지 및 보호구 커버"],
+      ["안전시설", "작업장 내 추락위험 구간·낙하물위험구간 방호조치, 개구부 방호조치"],
+      ["장비", "장비사용계획서 수립, 신호수 배치, 작업구역 지정"],
+      ["근로자", "작업내용 숙지 및 건강상태, 불안전한 행동 여부"],
+      ["정리정돈", "작업장 주변·창고, 안전통행로 설치"],
+      ["기타", ""]
+    ];
+    const blank = () => ({
+      site: FL.siteList[0] || "", date: FL.today(), weather: "",
+      crew: { ow_staff:"", ow_direct:"", co_civil:"", co_rebar:"", co_arch:"", co_mech:"", co_etc:"" },
+      work: "", orders: "",
+      edu: [{ kind:"", count:"", time:"", content:"" }],
+      noAcc: true, acc: [],
+      insp: INSP.map(() => ({ st:"", issue:"", action:"" })),
+      advice: "", photoNote: ""
+    });
+    let F = blank(), editId = null, picker = null, logs = [];
+    const pics = [];
+
+    /* ---------- 작성 화면 ---------- */
+    function sums(c){
+      const n = FL.num, ow = n(c.ow_staff) + n(c.ow_direct), co = n(c.co_civil) + n(c.co_rebar) + n(c.co_arch) + n(c.co_mech) + n(c.co_etc);
+      return { ow, co, all: ow + co };
+    }
+    function renderForm(){
+      const ro = !ctx.canWrite(), c = F.crew, s = sums(c);
+      const crewIn = (k, label) => `<div><label>${label}</label><input type="number" min="0" inputmode="numeric" data-k="crew.${k}" value="${esc(c[k])}"${ro ? " readonly" : ""}></div>`;
+      $("v-w").innerHTML = `
+      <div class="card">
+        <h2>${editId ? "일지 수정" : "일지 작성"}${editId ? ` <span class="tag info">${esc(F.date)} · ${esc(F.site)}</span>` : ""}</h2>
+        <div class="row3">
+          <div><label>현장</label>${FL.sel("site", F.site, FL.siteList, false, ro)}</div>
+          <div><label>일자</label>${FL.inp("date", F.date, {type:"date", ro})}</div>
+          <div><label>날씨</label>${FL.inp("weather", F.weather, {ph:"예: 맑음 / 흐림 / 비", ro})}</div>
+        </div>
+
+        <h3>출력 인원 (명)</h3>
+        <div class="hint" style="margin:0 0 6px">원청</div>
+        <div class="row2 keep" style="--n:2">${crewIn("ow_staff", "직원")}${crewIn("ow_direct", "직영")}</div>
+        <div class="hint" style="margin:10px 0 6px">협력업체</div>
+        <div class="row3">${crewIn("co_civil", "토목")}${crewIn("co_rebar", "철근")}${crewIn("co_arch", "건축")}${crewIn("co_mech", "설비")}${crewIn("co_etc", "기타")}</div>
+        <div class="hint" id="sumLine">원청 <b id="sOw">${s.ow}</b>명 · 협력업체 <b id="sCo">${s.co}</b>명 · 합계 <b id="sAll">${s.all}</b>명</div>
+
+        <h3>작업내용</h3>${FL.ta("work", F.work, "금일 작업 공종·위치·주요 내용", ro)}
+        <h3>안전업무 및 지시사항</h3>${FL.ta("orders", F.orders, "금일 수행한 안전업무, 협력업체 전달·지시사항", ro)}
+
+        <h3>교육 실시</h3>
+        <div class="rows">${F.edu.map((r, i) => `<div class="rrow" style="grid-template-columns:1.2fr .6fr .6fr 2fr auto">
+          <input type="text" data-k="edu.${i}.kind" value="${esc(r.kind)}" placeholder="구분(예: TBM, 특별교육)"${ro ? " readonly" : ""}>
+          <input type="number" min="0" data-k="edu.${i}.count" value="${esc(r.count)}" placeholder="인원"${ro ? " readonly" : ""}>
+          <input type="text" data-k="edu.${i}.time" value="${esc(r.time)}" placeholder="시간"${ro ? " readonly" : ""}>
+          <input type="text" data-k="edu.${i}.content" value="${esc(r.content)}" placeholder="내용"${ro ? " readonly" : ""}>
+          ${ro ? "" : `<button class="sbtn x wr" type="button" data-act="eduDel" data-i="${i}">삭제</button>`}</div>`).join("")}</div>
+        ${ro ? "" : `<div class="btns"><button class="sbtn wr" type="button" data-act="eduAdd">+ 교육 추가</button></div>`}
+
+        <h3>재해 현황</h3>
+        <label class="chk"><input type="checkbox" data-k="noAcc"${F.noAcc ? " checked" : ""}${ro ? " disabled" : ""}> 금일 재해 없음</label>
+        ${F.noAcc ? "" : `<div class="rows">${F.acc.map((r, i) => `<div class="rrow" style="grid-template-columns:.8fr .8fr 2fr 1.5fr auto">
+          <input type="text" data-k="acc.${i}.name" value="${esc(r.name)}" placeholder="성명"${ro ? " readonly" : ""}>
+          <input type="text" data-k="acc.${i}.job" value="${esc(r.job)}" placeholder="직종"${ro ? " readonly" : ""}>
+          <input type="text" data-k="acc.${i}.what" value="${esc(r.what)}" placeholder="사고 발생 개요"${ro ? " readonly" : ""}>
+          <input type="text" data-k="acc.${i}.action" value="${esc(r.action)}" placeholder="조치"${ro ? " readonly" : ""}>
+          ${ro ? "" : `<button class="sbtn x wr" type="button" data-act="accDel" data-i="${i}">삭제</button>`}</div>`).join("")}</div>
+          ${ro ? "" : `<div class="btns"><button class="sbtn wr" type="button" data-act="accAdd">+ 재해자 추가</button></div>`}`}
+
+        <h3>점검 항목 <span style="font-weight:400;color:var(--ink-faint)">(양호 ○ / 미흡 ×)</span></h3>
+        ${INSP.map((it, i) => { const r = F.insp[i]; return `<div class="rrow" style="border:1px solid var(--line);margin-top:6px;grid-template-columns:1fr">
+          <div><b>${esc(it[0])}</b>${it[1] ? ` <span style="color:var(--ink-soft);font-size:12.5px">— ${esc(it[1])}</span>` : ""}</div>
+          <div>${FL.segHtml(`insp.${i}.st`, r.st, [["○", "g"], ["×", "b"], ["-", "n"]], ro)}</div>
+          <div class="row2"><input type="text" data-k="insp.${i}.issue" value="${esc(r.issue)}" placeholder="지적사항${r.st === "×" ? " (필수)" : ""}"${ro ? " readonly" : ""}>
+          <input type="text" data-k="insp.${i}.action" value="${esc(r.action)}" placeholder="조치결과"${ro ? " readonly" : ""}></div></div>`; }).join("")}
+
+        <h3>지도·조언 내용</h3>${FL.ta("advice", F.advice, "발주처·감리·본사 등의 지도·조언 사항", ro)}
+        <h3>조치사항 사진</h3>
+        <div class="pk" id="pkMount"></div>
+        <label>사진 설명 (위치·내용)</label>${FL.inp("photoNote", F.photoNote, {ph:"예: 3층 개구부 덮개 설치 완료", ro})}
+        ${ro ? "" : `<button class="primary wr" id="btnSave" type="button">${editId ? "수정 저장" : "일지 저장"}</button>
+        <div class="btns"><button class="sbtn wr" type="button" data-act="print">미리보기·출력</button><button class="sbtn wr" type="button" data-act="new">새 일지</button></div>`}
+        <div class="hint">같은 현장·같은 날짜로 다시 저장하면 기존 일지가 수정됩니다.</div>
+      </div>`;
+      picker = FL.makePicker($("pkMount"), pics, 8);
+      if(ro) $("pkMount").style.display = "none";
+    }
+
+    FL.bind($("v-w"), () => F, (k) => {
+      if(k.startsWith("crew.")){ const s = sums(F.crew); $("sOw").textContent = s.ow; $("sCo").textContent = s.co; $("sAll").textContent = s.all; }
+      if(k === "noAcc") renderForm();
+      if(k === "site" || k === "date") checkExisting();
+    });
+    FL.bindSeg($("v-w"), () => F, () => renderForm());
+    $("v-w").addEventListener("click", e => {
+      const b = e.target.closest("[data-act]"); if(!b) return;
+      const a = b.dataset.act, i = +b.dataset.i;
+      if(a === "eduAdd"){ F.edu.push({ kind:"", count:"", time:"", content:"" }); renderForm(); }
+      else if(a === "eduDel"){ F.edu.splice(i, 1); if(!F.edu.length) F.edu.push({ kind:"", count:"", time:"", content:"" }); renderForm(); }
+      else if(a === "accAdd"){ F.acc.push({ name:"", job:"", what:"", action:"" }); renderForm(); }
+      else if(a === "accDel"){ F.acc.splice(i, 1); renderForm(); }
+      else if(a === "new"){ if(confirm("작성 중인 내용을 지우고 새 일지를 시작할까요?")) newLog(); }
+      else if(a === "print") showPreview(F, pics.map(d => ({ data:d })));
+    });
+    $("v-w").addEventListener("click", e => { if(e.target.id === "btnSave") save(); });
+
+    function newLog(){ F = blank(); editId = null; pics.length = 0; renderForm(); }
+    /* 같은 현장·날짜 일지가 이미 있으면 불러올지 묻기 */
+    let askedFor = "";
+    function checkExisting(){
+      const id = `${F.date}_${FL.key(F.site)}`;
+      if(id === editId || id === askedFor) return;
+      const ex = logs.find(l => l.id === id);
+      if(ex){ askedFor = id; if(confirm(`${F.date} ${F.site} 일지가 이미 있습니다. 불러와서 수정할까요?`)) openLog(id); }
+    }
+
+    async function save(){
+      if(!ctx.canWrite()) return;
+      if(!F.site){ alert("현장을 선택해 주세요. 등록된 현장이 없다면 본사 메뉴의 현장 등록에서 먼저 등록해야 합니다."); return; }
+      if(!F.date){ alert("일자를 입력해 주세요."); return; }
+      const bad = INSP.findIndex((it, i) => F.insp[i].st === "×" && !F.insp[i].issue.trim());
+      if(bad >= 0){ alert(`'${INSP[bad][0]}' 항목이 미흡(×)입니다. 지적사항을 입력해 주세요.`); return; }
+      if(picker.isBusy()){ alert("사진을 처리하는 중입니다. 잠시 후 다시 눌러 주세요."); return; }
+      const id = `${F.date}_${FL.key(F.site)}`;
+      if(logs.some(l => l.id === id) && editId !== id && !confirm(`${F.date} ${F.site} 일지가 이미 있습니다. 덮어쓸까요?`)) return;
+      const btn = $("btnSave"); btn.disabled = true; btn.textContent = "저장 중…";
+      try{
+        const prev = logs.find(l => l.id === id);
+        const data = { ...FL.clone(F), photoCount: pics.length, createdAt: (prev && prev.createdAt) || FL.iso(), createdByName: (prev && prev.createdByName) || ctx.name, updatedAt: FL.iso(), updatedByName: ctx.name, updatedBy: ctx.uid };
+        const ref = db.collection(COL).doc(id);
+        await ref.set(data);
+        await FL.replacePhotos(db, ref, pics.map(d => ({ data:d })));
+        editId = id; askedFor = id; FL.banner("");
+        renderForm(); alert("저장했습니다.");
+      }catch(e){ FL.onErr(e); alert("저장하지 못했습니다. 잠시 후 다시 시도해 주세요."); btn.disabled = false; btn.textContent = editId ? "수정 저장" : "일지 저장"; }
+    }
+
+    async function openLog(id){
+      const l = logs.find(x => x.id === id); if(!l) return;
+      const { id: _i, photoCount, createdAt, createdByName, updatedAt, updatedByName, updatedBy, ...rest } = l;
+      F = Object.assign(blank(), FL.clone(rest)); F.crew = Object.assign(blank().crew, F.crew);
+      while(F.insp.length < INSP.length) F.insp.push({ st:"", issue:"", action:"" });
+      editId = id; askedFor = id; pics.length = 0;
+      try{ (await FL.loadPhotos(db, `${COL}/${id}/photos`)).forEach(p => pics.push(p.data)); }catch(e){ FL.onErr(e); }
+      renderForm(); FL.show("w");
+    }
+
+    /* ---------- 출력 (P-11 붙임 1 양식) ---------- */
+    function docHtml(L, photos){
+      const c = L.crew || {}, s = sums(c), n = v => (v === "" || v == null) ? "" : esc(v);
+      const [y, m, d] = (L.date || "").split("-");
+      const eduRows = (L.edu || []).filter(r => r.kind || r.count || r.time || r.content);
+      const accRows = L.noAcc ? [] : (L.acc || []);
+      return `<div class="fm"><h1>안 전 보 건 일 지</h1>
+      <div class="meta"><div>현장명 : <b>${esc(L.site)}</b><br>일 자 : ${y}년 ${+m}월 ${+d}일 (${FL.dow(L.date)}) &nbsp;&nbsp; 날씨 : ${esc(L.weather)}</div>${FL.signBox()}</div>
+      <table><tr><th rowspan="3" style="width:7%">출력<br>인원</th><th rowspan="2" style="width:8%">합계</th><th colspan="3">원 청</th><th colspan="6">협력업체</th></tr>
+        <tr><th>직원</th><th>직영</th><th>계</th><th>토목</th><th>철근</th><th>건축</th><th>설비</th><th>기타</th><th>계</th></tr>
+        <tr><td class="c"><b>${s.all}</b></td><td class="c">${n(c.ow_staff)}</td><td class="c">${n(c.ow_direct)}</td><td class="c">${s.ow}</td><td class="c">${n(c.co_civil)}</td><td class="c">${n(c.co_rebar)}</td><td class="c">${n(c.co_arch)}</td><td class="c">${n(c.co_mech)}</td><td class="c">${n(c.co_etc)}</td><td class="c">${s.co}</td></tr></table>
+      <table><tr><th style="width:14%">작업내용</th><td class="t" style="height:62pt">${esc(L.work)}</td></tr>
+        <tr><th>안전업무 및<br>지시사항</th><td class="t" style="height:62pt">${esc(L.orders)}</td></tr></table>
+      <table><tr><th style="width:8%" rowspan="${Math.max(eduRows.length, 2) + 1}">교육</th><th style="width:22%">구분</th><th style="width:10%">인원</th><th style="width:12%">시간</th><th>내용</th></tr>
+        ${(eduRows.length ? eduRows : [{}, {}]).map(r => `<tr><td>${n(r.kind)}</td><td class="c">${n(r.count)}</td><td class="c">${n(r.time)}</td><td>${n(r.content)}</td></tr>`).join("")}</table>
+      <table><tr><th style="width:14%" rowspan="${Math.max(accRows.length, 1) + 1}">재해현황</th><th style="width:14%">성명</th><th style="width:14%">직종</th><th>사고 발생 개요</th><th style="width:24%">조치</th></tr>
+        ${accRows.length ? accRows.map(r => `<tr><td>${n(r.name)}</td><td>${n(r.job)}</td><td>${n(r.what)}</td><td>${n(r.action)}</td></tr>`).join("") : `<tr><td colspan="4" class="c">재해 없음</td></tr>`}</table>
+      <table><tr><th style="width:11%">점검항목</th><th>점검 내용</th><th style="width:8%">상태</th><th style="width:22%">지적사항</th><th style="width:22%">조치결과</th></tr>
+        ${INSP.map((it, i) => { const r = (L.insp || [])[i] || {}; return `<tr><td class="c"><b>${esc(it[0])}</b></td><td>${esc(it[1])}</td><td class="c">${n(r.st)}</td><td>${n(r.issue)}</td><td>${n(r.action)}</td></tr>`; }).join("")}</table>
+      <table><tr><th style="width:14%">지도·조언<br>내용</th><td class="t" style="height:50pt">${esc(L.advice)}</td></tr></table>
+      <div class="note">양호 : ○ , 미흡 : ×</div>
+      ${photos.length ? `<div class="sec">※ 조치사항 사진첨부${L.photoNote ? " — " + esc(L.photoNote) : ""}</div><div class="ph">${photos.map(p => `<div><img src="${p.data}" alt=""></div>`).join("")}</div>` : ""}
+      </div>`;
+    }
+    function showPreview(L, photos){ FL.showDoc(docHtml(L, photos), false); }
+
+    /* ---------- 목록 ---------- */
+    function renderList(){
+      const host = $("v-l");
+      if(!host.dataset.built){
+        host.dataset.built = "1";
+        host.innerHTML = `<div class="card"><h2>작성한 일지</h2><div class="filters"><select id="lSite"></select><input type="month" id="lMonth"></div><div id="lList"></div></div>`;
+        $("lSite").onchange = $("lMonth").onchange = renderList;
+        $("lList").addEventListener("click", async e => {
+          const b = e.target.closest("[data-act]"); if(!b) return;
+          const id = b.closest(".rec").dataset.id;
+          if(b.dataset.act === "toggle"){ open.has(id) ? open.delete(id) : open.add(id); renderList(); }
+          else if(b.dataset.act === "edit") openLog(id);
+          else if(b.dataset.act === "print"){
+            const l = logs.find(x => x.id === id);
+            try{ showPreview(l, await FL.loadPhotos(db, `${COL}/${id}/photos`)); }catch(err){ FL.onErr(err); alert("출력할 자료를 불러오지 못했습니다."); }
+          } else if(b.dataset.act === "del"){
+            if(!confirm("이 일지와 사진을 삭제할까요? 되돌릴 수 없습니다.")) return;
+            try{ await FL.deleteDoc(db, COL, id); if(editId === id){ newLog(); } }catch(err){ FL.onErr(err); alert("삭제하지 못했습니다."); }
+          }
+        });
+      }
+      FL.fillSite($("lSite"), true);
+      const fs = $("lSite").value, fm = $("lMonth").value;
+      const rows = logs.filter(l => (!fs || l.site === fs) && (!fm || (l.date || "").startsWith(fm)));
+      $("lList").innerHTML = rows.length ? rows.map(l => {
+        const s = sums(l.crew || {}), bad = (l.insp || []).filter(r => r.st === "×").length, isOpen = open.has(l.id);
+        return `<div class="rec" data-id="${esc(l.id)}">
+          <button class="rec-h" data-act="toggle"><span><div class="t">${esc(l.date)} (${FL.dow(l.date)}) · ${esc(l.site)}</div><div class="s">출력 ${s.all}명${l.weather ? " · " + esc(l.weather) : ""}${l.photoCount ? " · 📷 " + l.photoCount : ""}${l.updatedByName ? " · " + esc(l.updatedByName) : ""}</div></span>
+          ${bad ? `<span class="tag bad">미흡 ${bad}건</span>` : `<span class="tag good">이상 없음</span>`}</button>
+          ${isOpen ? `<div class="rec-b"><dl class="kv"><dt>작업내용</dt><dd>${esc(l.work || "-")}</dd><dt>안전업무·지시</dt><dd>${esc(l.orders || "-")}</dd><dt>재해</dt><dd>${l.noAcc ? "없음" : esc((l.acc || []).map(a => `${a.name} ${a.what}`).join(" / ") || "-")}</dd></dl>
+            <div class="btns"><button class="sbtn" data-act="print">출력</button>${ctx.canWrite() ? `<button class="sbtn pri" data-act="edit">수정</button>` : ""}${ctx.canDelete() ? `<button class="sbtn danger" data-act="del">삭제</button>` : ""}</div></div>` : ""}</div>`;
+      }).join("") : `<div class="empty">작성한 일지가 없습니다.</div>`;
+    }
+    const open = new Set();
+
+    /* ---------- 시작 ---------- */
+    renderForm(); renderList();
+    FL.onSites(() => {
+      if(!F.site || !FL.siteList.includes(F.site)){ if(!editId) F.site = FL.siteList[0] || ""; }
+      const a = document.activeElement; if(!(a && a.closest && a.closest("#v-w") && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) renderForm();
+      renderList();
+    });
+    db.collection(COL).orderBy("date", "desc").limit(300).onSnapshot(s => { logs = s.docs.map(d => ({ id: d.id, ...d.data() })); FL.banner(""); renderList(); }, FL.onErr);
+  }
+});
+</script>
+</body>
+</html>

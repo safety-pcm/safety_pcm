@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>안전작업허가서</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<script>window.TOOL_KEY = "wp";</script>
+<script src="../auth.js"></script>
+<script src="field-lib.js"></script>
+</head>
+<body>
+<script>
+/* =========================================================================
+   안전작업허가서 (도구 키: wp) — I-07 붙임 1 / 캐비넷 8-1-1
+   - 컬렉션 wp_permits : 허가서 1건 = 문서 1개 (일반위험작업 + 보충허가서 8종 선택 첨부)
+   - 진행 상태: 신청 → 승인 → 종료  (서명은 출력본에 직접 받습니다. 여기서는 일시·성명 기록)
+   - 허가번호 자동 부여: 현장 단위 "연도-일련번호"
+   ========================================================================= */
+const GEN = ["작업계획서(해당 시) 및 수시 위험성평가 결과 확인", "작업자 자격·교육 이수 확인 및 작업 전 교육(TBM) 실시", "보호구 착용(안전모·안전화·안전대 등)", "작업구역 설정, 출입통제 및 안전표지 설치", "관리감독자 배치 및 2인 1조 작업 필요 여부 확인", "전기기계·기구 접지 및 누전차단기 확인", "위험기계·기구 방호장치 확인", "작업장 조명 및 통로 확보", "소화기 비치 및 비상연락체계 확인", "다른 작업과의 간섭(동시 작업) 여부 확인"];
+const SUPP = {
+  fire:  { name: "화기작업", items: ["작업 장소 주변 가연성물질 제거 또는 방화포·불티 비산방지포 설치", "작업 장소 소화기 비치", "화재감시자 배치(작업 반경 11m 이내 가연성물질이 있는 장소 등)", "인화성 물질이 있거나 환기가 불충분한 장소의 가스농도 측정 및 환기", "용접기 자동전격방지기·접지 확인", "가스용기 전도방지 및 역화방지기 확인", "작업 종료 후 30분 이상 잔불 확인"], gas: true },
+  conf:  { name: "밀폐공간 출입작업", items: ["밀폐공간 작업 지침(DRSC-SHM-I-10) 교육 실시", "작업 전·재개 시 산소 및 유해가스 농도 측정(적정공기 확인)", "작업 중 계속 환기", "감시인 배치 및 출입 인원 점검", "송기마스크, 사다리, 섬유로프 등 대피·구조용 기구 비치", "작업자와 감시인 간 연락설비 확보", "출입금지 표지 게시"], gas: true, entrants: true },
+  exc:   { name: "굴착작업", items: ["지하매설물(가스관·전력선·상하수도관 등) 사전 조사 및 관계기관 협의", "굴착면 기울기 준수 또는 흙막이 지보공 설치", "굴착 장비 작업반경 출입통제 및 신호수 배치", "굴착부 주변 안전난간 등 추락방지 조치", "굴착토 적치 위치 이격", "작업계획서 작성(기준규칙 제38조)"], info: ["굴착 깊이(m)", "흙막이 공법", "지하매설물 확인 결과", "확인자"] },
+  high:  { name: "고소작업", items: ["작업발판, 안전난간, 추락방호망 설치", "안전대 부착설비 설치 및 안전대 착용", "고소작업대 과상승방지장치·아웃트리거 확인(해당 시)", "하부 낙하물 위험구역 설정 및 출입통제", "사다리 사용 기준 준수(DRSC-SHM-I-04)"], info: ["작업 높이(m)", "사용 설비(비계·고소작업대 등)", "안전대 부착 위치", "확인자"] },
+  heavy: { name: "중장비작업", items: ["작업계획서 작성(기준규칙 제38조)", "장비 검사증·보험·조종자 자격 확인", "유도자 또는 신호수 배치", "작업반경 내 출입통제", "지반 지지력 확인 및 아웃트리거 설치", "정격하중 준수 및 줄걸이 용구 점검", "가공전선 인근 작업 시 이격거리 확보"], info: ["장비명·규격", "등록번호", "조종자(자격번호)", "신호수"] },
+  elec:  { name: "정전작업", items: ["전원 차단 및 잠금장치·표지 설치(LOTO)", "검전기로 정전 여부 확인", "잔류전하 방전 및 단락접지", "작업 완료 후 작업자 대피·단락접지 해체 확인 후 통전"], info: ["차단 장소(분전반)", "잠금 번호", "검전 확인자", "통전 확인 시간"] },
+  night: { name: "야간·조출작업", items: ["작업 장소 조명 확보", "관리감독자 또는 감시인 상주", "비상연락체계 확인", "단독작업 금지"], info: ["작업 시간", "조명 설비", "감시인", "연락처"] },
+  dism:  { name: "안전시설물 해체작업", items: ["해체 범위·시간 최소화", "해체 중 작업자 안전대 착용", "해당 구역 출입통제 및 표지 설치", "작업 종료 즉시 원상 복구"], info: ["해체 시설물", "위치", "복구 확인 시간", "확인자(관리감독자)"] }
+};
+const SIGNS = ["신청 (협력업체 작업책임자)", "검토·승인 (관리감독자)", "안전조치 확인 (안전관리자)", "작업 종료 확인 (관리감독자)"];
+const NOTES = ["승인된 허가서는 작업 장소에 비치하거나 게시한다.", "허가의 유효기간은 허가한 당일의 작업시간으로 한다.", "작업 내용·장소·작업자·안전조치 조건이 바뀌거나 작업을 중지한 후 다시 시작하는 경우에는 다시 허가를 받는다.", "허가 조건이 지켜지지 않으면 관리감독자 또는 안전관리자는 즉시 작업을 중지시킨다."];
+const STATUS = ["신청", "승인", "종료"];
+
+FL.start({
+  key: "wp", title: "안전작업허가서",
+  tabs: [["w", "작성"], ["l", "허가 목록"]],
+  hashMap: { permit: "w" },
+  onReady(ctx){
+    const { db } = ctx, $ = FL.$, esc = FL.esc, COL = "wp_permits";
+    const items = n => Array.from({ length: n }, () => ({ ap: "", ok: "", note: "" }));
+    const blank = () => {
+      const o = { site: FL.siteList[0] || "", no: "", name: "", place: "", company: "", leader: "", date: FL.today(), start: "", end: "", count: "", content: "",
+        gen: items(GEN.length), attach: {}, supp: {}, signs: SIGNS.map(() => ({ org: "", title: "", name: "", at: "" })), status: "신청" };
+      Object.keys(SUPP).forEach(k => { o.supp[k] = { items: items(SUPP[k].items.length), info: ["", "", "", ""], gas: [0, 1, 2, 3].map(() => ({ t: "", o2: "", co2: "", co: "", h2s: "", lel: "", who: "" })), entrants: [0, 1, 2, 3, 4].map(() => ({ name: "", in: "", out: "", sign: "" })) }; });
+      return o;
+    };
+    let P = blank(), editId = null, permits = [];
+
+    const itemRows = (path, list, texts, ro) => `<div class="rows">${texts.map((t, i) => `<div class="rrow" style="grid-template-columns:1fr">
+      <div><b>${i + 1}.</b> ${esc(t)}</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--ink-soft)">해당 ${FL.segHtml(`${path}.${i}.ap`, list[i].ap, [["○", "g"], ["-", "n"]], ro)} 확인 ${FL.segHtml(`${path}.${i}.ok`, list[i].ok, [["○", "g"], ["×", "b"], ["-", "n"]], ro)}
+      <input type="text" style="flex:1;min-width:140px" data-k="${path}.${i}.note" value="${esc(list[i].note)}" placeholder="비고"${ro ? " readonly" : ""}></div></div>`).join("")}</div>`;
+
+    function renderForm(){
+      const ro = !ctx.canWrite(), att = Object.keys(SUPP).filter(k => P.attach[k]);
+      $("v-w").innerHTML = `<div class="card"><h2>${editId ? "허가서 수정" : "안전작업허가서 작성"} ${editId ? `<span class="tag info">${esc(P.no)}</span> <span class="tag ${P.status === "종료" ? "off" : P.status === "승인" ? "good" : "warn"}">${esc(P.status)}</span>` : ""}</h2>
+        <div class="row3"><div><label>현장</label>${FL.sel("site", P.site, FL.siteList, false, ro)}</div><div><label>작업명</label>${FL.inp("name", P.name, {ro})}</div><div><label>작업 장소</label>${FL.inp("place", P.place, {ro})}</div></div>
+        <div class="row3"><div><label>협력업체</label>${FL.inp("company", P.company, {ro})}</div><div><label>작업책임자</label>${FL.inp("leader", P.leader, {ro})}</div><div><label>작업 인원(명)</label>${FL.inp("count", P.count, {type:"number", ro})}</div></div>
+        <div class="row3"><div><label>작업 일자</label>${FL.inp("date", P.date, {type:"date", ro})}</div><div><label>시작 시각</label>${FL.inp("start", P.start, {type:"time", ro})}</div><div><label>종료 시각</label>${FL.inp("end", P.end, {type:"time", ro})}</div></div>
+        <label>작업 내용</label>${FL.ta("content", P.content, "", ro)}
+        <h3>안전조치 확인 <span style="font-weight:400;color:var(--ink-faint)">(해당·확인: ○ 이행 / × 미이행 / - 해당없음)</span></h3>
+        ${itemRows("gen", P.gen, GEN, ro)}
+        <h3>보충작업 허가서 첨부 <span style="font-weight:400;color:var(--ink-faint)">(해당 작업 체크)</span></h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">${Object.keys(SUPP).map(k => `<label class="chk" style="margin:4px 0"><input type="checkbox" data-k="attach.${k}"${P.attach[k] ? " checked" : ""}${ro ? " disabled" : ""}>${esc(SUPP[k].name)}</label>`).join("")}</div>
+        ${att.map(k => suppHtml(k, ro)).join("")}
+        <h3>허가 및 확인 <span style="font-weight:400;color:var(--ink-faint)">(서명은 출력본에 직접)</span></h3>
+        <div class="rows">${SIGNS.map((s, i) => `<div class="rrow" style="grid-template-columns:1fr"><div><b>${esc(s)}</b></div><div class="row4"><input type="text" data-k="signs.${i}.org" value="${esc(P.signs[i].org)}" placeholder="소속"${ro ? " readonly" : ""}><input type="text" data-k="signs.${i}.title" value="${esc(P.signs[i].title)}" placeholder="직책"${ro ? " readonly" : ""}><input type="text" data-k="signs.${i}.name" value="${esc(P.signs[i].name)}" placeholder="성명"${ro ? " readonly" : ""}><input type="datetime-local" data-k="signs.${i}.at" value="${esc(P.signs[i].at)}"${ro ? " readonly" : ""}></div></div>`).join("")}</div>
+        ${ro ? "" : `<button class="primary wr" id="btnSave" type="button">${editId ? "수정 저장" : "허가서 저장 (신청)"}</button>
+        <div class="btns"><button class="sbtn wr" type="button" data-act="print">미리보기·출력</button><button class="sbtn wr" type="button" data-act="new">새 허가서</button></div>`}
+      </div>`;
+    }
+    function suppHtml(k, ro){
+      const C = SUPP[k], S = P.supp[k];
+      return `<div class="card" style="margin:12px 0 0;border-color:var(--hazard)"><h2 style="font-size:14px">보충허가서 — ${esc(C.name)}</h2>
+        ${itemRows(`supp.${k}.items`, S.items, C.items, ro)}
+        ${C.info ? `<div class="row2" style="margin-top:8px">${C.info.map((l, i) => `<div><label>${esc(l)}</label>${FL.inp(`supp.${k}.info.${i}`, S.info[i], {ro})}</div>`).join("")}</div>` : ""}
+        ${C.gas ? `<h3>가스농도 측정 <span style="font-weight:400;color:var(--ink-faint)">(적정공기: 산소 18%↑ 23.5%↓, 탄산가스 1.5%↓, 일산화탄소 30ppm↓, 황화수소 10ppm↓)</span></h3><div class="rows">${S.gas.map((g, i) => `<div class="rrow" style="grid-template-columns:repeat(7,1fr)">${[["t", "시간", "time"], ["o2", "산소%"], ["co2", "CO₂%"], ["co", "CO ppm"], ["h2s", "H₂S ppm"], ["lel", "%LEL"], ["who", "측정자"]].map(f => `<input type="${f[2] || "text"}" data-k="supp.${k}.gas.${i}.${f[0]}" value="${esc(g[f[0]])}" placeholder="${f[1]}"${ro ? " readonly" : ""} style="min-width:0;padding:6px 4px">`).join("")}</div>`).join("")}</div>` : ""}
+        ${C.entrants ? `<h3>출입자 명단</h3><div class="rows">${S.entrants.map((g, i) => `<div class="rrow" style="grid-template-columns:repeat(3,1fr)">${[["name", "성명"], ["in", "입장 시간", "time"], ["out", "퇴장 시간", "time"]].map(f => `<input type="${f[2] || "text"}" data-k="supp.${k}.entrants.${i}.${f[0]}" value="${esc(g[f[0]])}" placeholder="${f[1]}"${ro ? " readonly" : ""}>`).join("")}</div>`).join("")}</div>` : ""}
+      </div>`;
+    }
+    FL.bind($("v-w"), () => P, k => { if(k.startsWith("attach.")) { const y = scrollY; renderForm(); scrollTo(0, y); } });
+    FL.bindSeg($("v-w"), () => P, () => { const y = scrollY; renderForm(); scrollTo(0, y); });
+    $("v-w").addEventListener("click", e => {
+      if(e.target.id === "btnSave"){ save(); return; }
+      const b = e.target.closest("[data-act]"); if(!b) return;
+      if(b.dataset.act === "new"){ if(confirm("작성 중인 내용을 지우고 새 허가서를 시작할까요?")){ P = blank(); editId = null; renderForm(); } }
+      else if(b.dataset.act === "print") FL.showDoc(docHtml(P), false);
+    });
+
+    function nextNo(site, date){
+      const yr = (date || FL.today()).slice(0, 4), seq = permits.filter(p => p.site === site && (p.no || "").startsWith(yr + "-")).map(p => +p.no.split("-")[1] || 0);
+      return `${yr}-${String((seq.length ? Math.max(...seq) : 0) + 1).padStart(3, "0")}`;
+    }
+    async function save(){
+      if(!ctx.canWrite()) return;
+      if(!P.site){ alert("현장을 선택해 주세요. 등록된 현장이 없다면 본사 메뉴의 현장 등록에서 먼저 등록해야 합니다."); return; }
+      if(!P.name.trim() || !P.company.trim()){ alert("작업명과 협력업체를 입력해 주세요."); return; }
+      const btn = $("btnSave"); btn.disabled = true; btn.textContent = "저장 중…";
+      try{
+        const ref = editId ? db.collection(COL).doc(editId) : db.collection(COL).doc();
+        const prev = permits.find(x => x.id === ref.id);
+        if(!P.no) P.no = nextNo(P.site, P.date);
+        const att = Object.keys(SUPP).filter(k => P.attach[k]);
+        const supp = {}; att.forEach(k => { supp[k] = P.supp[k]; });   /* 첨부한 보충허가서만 저장 */
+        await ref.set({ ...FL.clone({ ...P, supp }), attachList: att, createdAt: (prev && prev.createdAt) || FL.iso(), createdByName: (prev && prev.createdByName) || ctx.name, updatedAt: FL.iso(), updatedByName: ctx.name });
+        editId = ref.id; FL.banner(""); renderForm(); alert("저장했습니다. 허가번호: " + P.no);
+      }catch(e){ FL.onErr(e); alert("저장하지 못했습니다. 잠시 후 다시 시도해 주세요."); btn.disabled = false; btn.textContent = editId ? "수정 저장" : "허가서 저장 (신청)"; }
+    }
+    function openPermit(id){
+      const l = permits.find(x => x.id === id); if(!l) return;
+      const { id: _i, attachList, createdAt, createdByName, updatedAt, updatedByName, ...rest } = l;
+      const base = blank(); P = Object.assign(base, FL.clone(rest));
+      Object.keys(SUPP).forEach(k => { P.supp[k] = Object.assign(base.supp[k], (rest.supp || {})[k] || {}); });
+      editId = id; renderForm(); FL.show("w");
+    }
+
+    /* ---------- 출력 ---------- */
+    function docHtml(L){
+      const n = v => (v === "" || v == null) ? "" : esc(v);
+      const att = Object.keys(SUPP).filter(k => L.attach && L.attach[k]);
+      const times = `${(L.date || "").replace(/-/g, ".")} (${FL.dow(L.date)}) ${n(L.start)} ~ ${n(L.end)}`;
+      const head = (title, sub) => `<h1 style="font-size:17pt;letter-spacing:3pt">${title}</h1><div class="note" style="text-align:center">${sub}</div>
+        <table><tr><th style="width:12%">현장명</th><td>${n(L.site)}</td><th style="width:12%">허가번호</th><td>${n(L.no)}</td></tr>
+        <tr><th>작업명</th><td>${n(L.name)}</td><th>작업 장소</th><td>${n(L.place)}</td></tr>
+        <tr><th>협력업체</th><td>${n(L.company)}</td><th>작업책임자</th><td>${n(L.leader)}</td></tr>
+        <tr><th>작업 일시</th><td>${times}</td><th>작업 인원</th><td>${n(L.count)}${L.count ? " 명" : ""}</td></tr>
+        <tr><th>작업 내용</th><td colspan="3" style="height:34pt;vertical-align:top">${n(L.content)}</td></tr></table>`;
+      const chk = (texts, list) => `<div class="sec">안전조치 확인 (해당·확인란: ○ 이행 / × 미이행 / - 해당없음)</div><table><tr><th style="width:6%">No</th><th>안전조치 사항</th><th style="width:8%">해당</th><th style="width:8%">확인</th><th style="width:20%">비고</th></tr>
+        ${texts.map((t, i) => { const r = (list || [])[i] || {}; return `<tr><td class="c">${i + 1}</td><td>${esc(t)}</td><td class="c">${n(r.ap)}</td><td class="c">${n(r.ok)}</td><td>${n(r.note)}</td></tr>`; }).join("")}</table>`;
+      const sign = `<div class="sec">허가 및 확인</div><table><tr><th style="width:26%">구분</th><th>소속</th><th>직책</th><th>성명</th><th style="width:14%">서명</th><th style="width:20%">일시</th></tr>
+        ${SIGNS.map((s, i) => { const g = (L.signs || [])[i] || {}; return `<tr><td>${esc(s)}</td><td>${n(g.org)}</td><td>${n(g.title)}</td><td>${n(g.name)}</td><td class="h"></td><td class="c" style="font-size:8pt">${n((g.at || "").replace("T", " "))}</td></tr>`; }).join("")}</table>
+        <div class="note">${NOTES.map((t, i) => `${i + 1}. ${esc(t)}`).join("<br>")}</div>`;
+      let h = `<div class="fm">${head("안전작업허가서", "※ 모든 작업허가 대상 작업에 공통 작성 (DRSC-SHM-I-07 [붙임 1])")}${chk(GEN, L.gen)}
+        <div class="sec">보충작업 허가서 첨부 여부 (해당 작업에 ○)</div><table>${[0, 1, 2, 3].map(r => `<tr>${[0, 1].map(c => { const k = Object.keys(SUPP)[r * 2 + c]; return `<td style="width:25%">${esc(SUPP[k].name)}</td><td class="c" style="width:25%">${L.attach && L.attach[k] ? "○" : ""}</td>`; }).join("")}</tr>`).join("")}</table>${sign}</div>`;
+      att.forEach(k => {
+        const C = SUPP[k], S = (L.supp || {})[k] || {};
+        h += `<div class="fm pb">${head(`안전작업허가서 (${C.name} 보충)`, "※ 일반위험작업 허가서와 함께 작성")}${chk(C.items, S.items)}
+          ${C.info ? `<div class="sec">${esc(C.name)} 정보</div><table><tr>${C.info.map(l => `<th>${esc(l)}</th>`).join("")}</tr><tr>${C.info.map((l, i) => `<td class="c h">${n((S.info || [])[i])}</td>`).join("")}</tr></table>` : ""}
+          ${C.gas ? `<div class="sec">가스농도 측정 (적정공기: 산소 18% 이상 23.5% 미만, 탄산가스 1.5% 미만, 일산화탄소 30ppm 미만, 황화수소 10ppm 미만)</div><table><tr><th>측정시간</th><th>산소(%)</th><th>탄산가스(%)</th><th>일산화탄소(ppm)</th><th>황화수소(ppm)</th><th>가연성가스(%LEL)</th><th>측정자(서명)</th></tr>${(S.gas || [0, 1, 2, 3].map(() => ({}))).map(g => `<tr class="h">${["t", "o2", "co2", "co", "h2s", "lel", "who"].map(f => `<td class="c">${n(g[f])}</td>`).join("")}</tr>`).join("")}</table>` : ""}
+          ${C.entrants ? `<div class="sec">출입자 명단</div><table><tr><th>성명</th><th>입장 시간</th><th>퇴장 시간</th><th>감시인 서명</th></tr>${(S.entrants || [0, 1, 2, 3, 4].map(() => ({}))).map(g => `<tr class="h"><td>${n(g.name)}</td><td class="c">${n(g.in)}</td><td class="c">${n(g.out)}</td><td></td></tr>`).join("")}</table>` : ""}
+          ${sign}</div>`;
+      });
+      return h;
+    }
+
+    /* ---------- 목록 ---------- */
+    const open = new Set();
+    function renderList(){
+      const host = $("v-l");
+      if(!host.dataset.built){
+        host.dataset.built = "1";
+        host.innerHTML = `<div class="card"><h2>허가 목록</h2><div class="filters"><select id="lSite"></select><select id="lSt"><option value="">전체 상태</option>${STATUS.map(s => `<option>${s}</option>`).join("")}</select><input type="date" id="lDate"></div><div id="lList"></div></div>`;
+        $("lSite").onchange = $("lSt").onchange = $("lDate").onchange = renderList;
+        $("lList").addEventListener("click", async e => {
+          const b = e.target.closest("[data-act]"); if(!b) return; const id = b.closest(".rec").dataset.id, a = b.dataset.act;
+          if(a === "toggle"){ open.has(id) ? open.delete(id) : open.add(id); renderList(); }
+          else if(a === "edit") openPermit(id);
+          else if(a === "print") FL.showDoc(docHtml(permits.find(x => x.id === id)), false);
+          else if(a === "approve" || a === "close"){
+            const to = a === "approve" ? "승인" : "종료";
+            if(!confirm(`이 허가서를 '${to}' 상태로 변경할까요?`)) return;
+            try{ await db.collection(COL).doc(id).update({ status: to, [to === "승인" ? "approvedAt" : "closedAt"]: FL.iso(), [to === "승인" ? "approvedByName" : "closedByName"]: ctx.name, updatedAt: FL.iso(), updatedByName: ctx.name }); }catch(err){ FL.onErr(err); alert("상태를 변경하지 못했습니다."); }
+          }
+          else if(a === "del"){ if(!confirm("이 허가서를 삭제할까요? 되돌릴 수 없습니다.")) return; try{ await db.collection(COL).doc(id).delete(); if(editId === id){ P = blank(); editId = null; renderForm(); } }catch(err){ FL.onErr(err); alert("삭제하지 못했습니다."); } }
+        });
+      }
+      FL.fillSite($("lSite"), true);
+      const fs = $("lSite").value, st = $("lSt").value, fd = $("lDate").value;
+      const rows = permits.filter(l => (!fs || l.site === fs) && (!st || l.status === st) && (!fd || l.date === fd));
+      $("lList").innerHTML = rows.length ? rows.map(l => {
+        const o = open.has(l.id), cls = l.status === "종료" ? "off" : l.status === "승인" ? "good" : "warn";
+        return `<div class="rec" data-id="${esc(l.id)}"><button class="rec-h" data-act="toggle"><span><div class="t">${esc(l.no)} · ${esc(l.name)}</div><div class="s">${esc(l.site)} · ${esc(l.company)} · ${esc(l.date)} ${esc(l.start || "")}${l.attachList && l.attachList.length ? " · 보충 " + esc(l.attachList.map(k => SUPP[k].name).join(", ")) : ""}</div></span><span class="tag ${cls}">${esc(l.status)}</span></button>
+          ${o ? `<div class="rec-b"><dl class="kv"><dt>작업 장소</dt><dd>${esc(l.place || "-")}</dd><dt>작업 내용</dt><dd>${esc(l.content || "-")}</dd></dl>
+          <div class="btns"><button class="sbtn" data-act="print">출력</button>${ctx.canWrite() ? `<button class="sbtn pri" data-act="edit">수정</button>` : ""}${ctx.canManage() && l.status === "신청" ? `<button class="sbtn" data-act="approve">승인 처리</button>` : ""}${ctx.canManage() && l.status === "승인" ? `<button class="sbtn" data-act="close">작업 종료 처리</button>` : ""}${ctx.canDelete() ? `<button class="sbtn danger" data-act="del">삭제</button>` : ""}</div></div>` : ""}</div>`;
+      }).join("") : `<div class="empty">허가서가 없습니다.</div>`;
+    }
+
+    renderForm(); renderList();
+    FL.onSites(() => {
+      if(!editId && !FL.siteList.includes(P.site)) P.site = FL.siteList[0] || "";
+      const a = document.activeElement; if(!(a && a.closest && a.closest("#v-w") && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) renderForm();
+      renderList();
+    });
+    db.collection(COL).orderBy("date", "desc").limit(300).onSnapshot(s => { permits = s.docs.map(d => ({ id: d.id, ...d.data() })); FL.banner(""); renderList(); }, FL.onErr);
+  }
+});
+</script>
+</body>
+</html>
